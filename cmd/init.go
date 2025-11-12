@@ -10,11 +10,19 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// lockify init --env [env]
 var initCmd = &cobra.Command{
-	Use:   "init [env]",
+	Use:   "init",
 	Short: "Initialize a new Lockify vault in the current directory",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		env := args[0]
+		env, err := cmd.Flags().GetString("env")
+		if err != nil {
+			return fmt.Errorf("failed to retrieve key flag")
+		}
+		if env == "" {
+			return fmt.Errorf("env is required")
+		}
+
 		vaultPath := filepath.Join(".lockify", env+".vault.enc")
 
 		fmt.Println("Initializing Lockify vault at", vaultPath)
@@ -44,5 +52,6 @@ var initCmd = &cobra.Command{
 }
 
 func init() {
+	initCmd.Flags().StringP("env", "e", "", "Environment Name")
 	rootCmd.AddCommand(initCmd)
 }

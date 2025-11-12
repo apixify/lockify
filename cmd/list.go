@@ -7,9 +7,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// lockify list [env]
 var listCmd = &cobra.Command{
 	Use:   "list",
-	Short: "List all secrets in the vault",
+	Short: "Displays only keys, not decrypted values.",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		fmt.Println("Listing all secrets in the vault")
 		env, _ := cmd.Flags().GetString("env")

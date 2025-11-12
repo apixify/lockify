@@ -10,12 +10,17 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var setCmd = &cobra.Command{
-	Use:   "set [env]",
+// lockify add --env [env]
+var addCmd = &cobra.Command{
+	Use:   "add",
 	Short: "add/update a new entry to the vault",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		fmt.Println("seting a new secret to the vault")
-		env := args[0]
+		env, _ := cmd.Flags().GetString("env")
+		if env == "" {
+			return fmt.Errorf("env is required")
+		}
+
+		fmt.Println("seting a new secret to the vault...")
 		isSecret, _ := cmd.Flags().GetBool("secret")
 		envPassphraseKey, _ := cmd.Flags().GetString("passphrase-env")
 		key, value := getUserInputForKeyAndValue(isSecret)
@@ -43,15 +48,17 @@ var setCmd = &cobra.Command{
 		vault.SetEntry(key, encryptedValue)
 		vault.Save()
 
+		fmt.Printf("✅ key %s is added successfully.", key)
+
 		return nil
 	},
 }
 
 func init() {
-	setCmd.Flags().String("passphrase-env", "LOCKIFY_PASSPHRASE", "Name of the environment variable that holds the passphrase")
-	setCmd.Flags().BoolP("secret", "s", false, "States that value to set is a secret and should be hidden in the terminal")
+	addCmd.Flags().StringP("env", "e", "", "Environment Name")
+	addCmd.Flags().BoolP("secret", "s", false, "States that value to set is a secret and should be hidden in the terminal")
 
-	rootCmd.AddCommand(setCmd)
+	rootCmd.AddCommand(addCmd)
 }
 
 func getUserInputForKeyAndValue(isSecret bool) (key, value string) {
