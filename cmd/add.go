@@ -20,7 +20,7 @@ var addCmd = &cobra.Command{
 			return fmt.Errorf("env is required")
 		}
 
-		fmt.Println("seting a new secret to the vault...")
+		fmt.Println("⏳ seting a new secret to the vault...")
 		isSecret, _ := cmd.Flags().GetBool("secret")
 		envPassphraseKey, _ := cmd.Flags().GetString("passphrase-env")
 		key, value := getUserInputForKeyAndValue(isSecret)
@@ -46,7 +46,10 @@ var addCmd = &cobra.Command{
 		}
 
 		vault.SetEntry(key, encryptedValue)
-		vault.Save()
+		err = vault.Save()
+		if err != nil {
+			return fmt.Errorf("failed to save vault")
+		}
 
 		fmt.Printf("✅ key %s is added successfully.", key)
 

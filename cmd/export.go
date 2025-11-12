@@ -30,7 +30,7 @@ var exportCmd = &cobra.Command{
 		if env == "" {
 			return fmt.Errorf("env is required")
 		}
-		fmt.Fprintf(os.Stderr, "🔐 Exporting secrets for %s...\n", env)
+		fmt.Fprintf(os.Stderr, "⏳ Exporting secrets for %s...\n", env)
 
 		format, err := cmd.Flags().GetString("format")
 		if err != nil {

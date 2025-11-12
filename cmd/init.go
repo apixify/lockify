@@ -25,7 +25,7 @@ var initCmd = &cobra.Command{
 
 		vaultPath := filepath.Join(".lockify", env+".vault.enc")
 
-		fmt.Println("Initializing Lockify vault at", vaultPath)
+		fmt.Println("⏳ Initializing Lockify vault at", vaultPath)
 		if _, err := os.Stat(vaultPath); err == nil {
 			return fmt.Errorf("vault already exists at %s", vaultPath)
 		}

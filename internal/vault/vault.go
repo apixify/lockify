@@ -24,10 +24,9 @@ type Entry struct {
 }
 
 type Vault struct {
-	Meta       Meta             `json:"meta"`
-	Passphrase string           `json:"-"`
-	Path       string           `json:"-"`
-	Entries    map[string]Entry `json:"entries"`
+	Meta    Meta             `json:"meta"`
+	Path    string           `json:"-"`
+	Entries map[string]Entry `json:"entries"`
 }
 
 func Create(vaultPath, env, passphrase, salt string) (*Vault, error) {

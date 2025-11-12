@@ -14,6 +14,7 @@ var delCmd = &cobra.Command{
 	Use:   "del",
 	Short: "delete an entry from the vault of an env",
 	RunE: func(cmd *cobra.Command, args []string) error {
+		fmt.Println("⏳ removing key...")
 		env, err := cmd.Flags().GetString("env")
 		if err != nil {
 			return fmt.Errorf("failed to retrieve key flag")
@@ -43,7 +44,10 @@ var delCmd = &cobra.Command{
 		}
 
 		vault.DeleteEntry(key)
-		vault.Save()
+		err = vault.Save()
+		if err != nil {
+			return fmt.Errorf("failed to save vault")
+		}
 
 		fmt.Printf("✅ key %s is removed successfully.\n", key)
 

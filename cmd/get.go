@@ -14,7 +14,7 @@ var getCmd = &cobra.Command{
 	Use:   "get",
 	Short: "get a secret from the vault",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		fmt.Println("getting a secret from the vault")
+		fmt.Println("⏳ getting a secret from the vault")
 		env, _ := cmd.Flags().GetString("env")
 		key, _ := cmd.Flags().GetString("key")
 		if env == "" {
