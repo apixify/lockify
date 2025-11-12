@@ -13,6 +13,7 @@ import (
 
 type Meta struct {
 	Env         string `json:"env"`
+	Salt        string `json:"salt"`
 	FingerPrint string `json:"fingerprint"`
 }
 
@@ -29,7 +30,7 @@ type Vault struct {
 	Entries    map[string]Entry `json:"entries"`
 }
 
-func Create(vaultPath string, env string, passphrase string) (*Vault, error) {
+func Create(vaultPath, env, passphrase, salt string) (*Vault, error) {
 	var vault Vault
 	fingerprint, err := vault.GenerateFingerprint(passphrase)
 	if err != nil {
@@ -39,6 +40,7 @@ func Create(vaultPath string, env string, passphrase string) (*Vault, error) {
 	vault.Path = vaultPath
 	vault.Meta.Env = env
 	vault.Meta.FingerPrint = fingerprint
+	vault.Meta.Salt = salt
 	vault.Entries = make(map[string]Entry)
 	err = vault.Save()
 	if err != nil {
@@ -106,7 +108,7 @@ func (v *Vault) SetEntry(key, value string) {
 }
 
 func (v *Vault) Save() error {
-	content, err := json.Marshal(v)
+	content, err := json.MarshalIndent(v, "", "  ")
 	if err != nil {
 		return err
 	}

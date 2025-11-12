@@ -38,18 +38,18 @@ func NewCryptoService(encodedSalt string, passphrase string) (*CryptoService, er
 	return &CryptoService{aesgcm: aesgcm}, nil
 }
 
-func GenerateSalt(n int) ([]byte, error) {
+func GenerateSalt(n int) (string, error) {
 	if n <= 0 {
 		n = 16
 	}
 	s := make([]byte, n)
 	if _, err := io.ReadFull(rand.Reader, s); err != nil {
-		return nil, err
+		return "", err
 	}
-	return s, nil
+	return base64.StdEncoding.EncodeToString(s), nil
 }
 
-func (crypto *CryptoService) EncryptValue(plaintext []byte, passphrase string, salt []byte) (string, error) {
+func (crypto *CryptoService) EncryptValue(plaintext []byte) (string, error) {
 	nonce := make([]byte, nonceSize)
 	if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
 		return "", err
@@ -63,7 +63,7 @@ func (crypto *CryptoService) EncryptValue(plaintext []byte, passphrase string, s
 	return enc, nil
 }
 
-func (crypto *CryptoService) DecryptValue(encoded string, passphrase string, salt []byte) (string, error) {
+func (crypto *CryptoService) DecryptValue(encoded string) (string, error) {
 	raw, err := base64.StdEncoding.DecodeString(encoded)
 	if err != nil {
 		return "", err

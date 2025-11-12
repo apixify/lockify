@@ -28,7 +28,12 @@ var initCmd = &cobra.Command{
 
 		fmt.Println("Creating empty encrypted vault placeholder at", vaultPath)
 		passphrase := service.NewPassphraseService(env)
-		_, err := vault.Create(vaultPath, env, passphrase.GetPassphrase())
+		salt, err := service.GenerateSalt(16)
+		if err != nil {
+			return fmt.Errorf("failed to generate salt")
+		}
+
+		_, err = vault.Create(vaultPath, env, passphrase.GetPassphrase(), salt)
 		if err != nil {
 			return fmt.Errorf("failed to create %s: %w", vaultPath, err)
 		}
