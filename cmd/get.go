@@ -43,7 +43,7 @@ The decrypted value is printed to stdout, making it suitable for shell scripting
 
 func init() {
 	getCmd.Flags().StringP("env", "e", "", "Environment name")
-	getCmd.Flags().StringP("key", "k", "", "The key to use for getting the secret")
+	getCmd.Flags().StringP("key", "k", "", "The key to use for getting the entry")
 
 	rootCmd.AddCommand(getCmd)
 }
