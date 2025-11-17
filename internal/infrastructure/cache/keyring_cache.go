@@ -16,21 +16,21 @@ func NewOSKeyring(service string) service.Cache {
 }
 
 // Set stores a value in the keyring
-func (osKeyRing *OSKeyring) Set(service, key, value string) error {
-	return keyring.Set(service, key, value)
+func (osKeyRing *OSKeyring) Set(key, value string) error {
+	return keyring.Set(osKeyRing.service, key, value)
 }
 
 // Get retrieves a value from the keyring
-func (osKeyRing *OSKeyring) Get(service, key string) (string, error) {
-	return keyring.Get(service, key)
+func (osKeyRing *OSKeyring) Get(key string) (string, error) {
+	return keyring.Get(osKeyRing.service, key)
 }
 
 // Delete removes a value from the keyring
-func (osKeyRing *OSKeyring) Delete(service, key string) error {
-	return keyring.Delete(service, key)
+func (osKeyRing *OSKeyring) Delete(key string) error {
+	return keyring.Delete(osKeyRing.service, key)
 }
 
 // DeleteAll removes all values for a service from the keyring
-func (osKeyRing *OSKeyring) DeleteAll(service string) error {
-	return keyring.DeleteAll(service)
+func (osKeyRing *OSKeyring) DeleteAll() error {
+	return keyring.DeleteAll(osKeyRing.service)
 }

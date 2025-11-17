@@ -12,22 +12,18 @@ import (
 
 // PassphraseService implements service.PassphraseService
 type PassphraseService struct {
-	cache       service.Cache
-	cryptoUtil  service.HashService
-	serviceName string
-	envVar      string
+	cache      service.Cache
+	cryptoUtil service.HashService
+	envVar     string
 }
 
 // NewPassphraseService creates a new passphrase service
-func NewPassphraseService(cache service.Cache, cryptoUtil service.HashService, serviceName string, envVar string) service.PassphraseService {
-	if serviceName == "" {
-		serviceName = "lockify"
-	}
+func NewPassphraseService(cache service.Cache, cryptoUtil service.HashService, envVar string) service.PassphraseService {
 	if envVar == "" {
 		envVar = "LOCKIFY_PASSPHRASE"
 	}
 
-	return &PassphraseService{cache, cryptoUtil, serviceName, envVar}
+	return &PassphraseService{cache, cryptoUtil, envVar}
 }
 
 // Get retrieves a passphrase from environment variable, keyring cache, or user input
@@ -41,7 +37,7 @@ func (service *PassphraseService) Get(ctx context.Context, env string) (string, 
 	}
 
 	key := service.getKeyringKey(env)
-	passphrase, err := service.cache.Get(service.serviceName, key)
+	passphrase, err := service.cache.Get(key)
 	if err == nil && passphrase != "" {
 		return passphrase, nil
 	}
@@ -56,12 +52,12 @@ func (service *PassphraseService) Clear(ctx context.Context, env string) error {
 	}
 	key := service.getKeyringKey(env)
 
-	return service.cache.Delete(service.serviceName, key)
+	return service.cache.Delete(key)
 }
 
 // ClearAll clears all cached passphrases
 func (service *PassphraseService) ClearAll(ctx context.Context) error {
-	return service.cache.DeleteAll(service.serviceName)
+	return service.cache.DeleteAll()
 }
 
 // Validate validates a passphrase against a vault's fingerprint
@@ -96,7 +92,7 @@ func (s *PassphraseService) getFromUser(ctx context.Context, env string) (string
 
 	// Cache passphrase in keyring (best effort, ignore errors)
 	key := s.getKeyringKey(env)
-	_ = s.cache.Set(s.serviceName, key, passphrase)
+	_ = s.cache.Set(key, passphrase)
 
 	return passphrase, nil
 }
