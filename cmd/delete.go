@@ -9,8 +9,14 @@ import (
 
 // lockify del --env [env] --key [key]
 var delCmd = &cobra.Command{
-	Use:   "del",
-	Short: "delete an entry from the vault of an env",
+	Use:     "delete",
+	Aliases: []string{"del", "rm"},
+	Short:   "Delete an entry from the vault",
+	Long: `Delete an entry from the vault.
+
+This command removes a key-value pair from the vault for the specified environment.`,
+	Example: `  lockify delete --env prod --key OLD_KEY
+  lockify del --env staging -k DEPRECATED_KEY`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		fmt.Println("⏳ removing key...")
 		env, err := requireEnvFlag(cmd)

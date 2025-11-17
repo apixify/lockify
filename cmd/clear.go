@@ -8,7 +8,12 @@ import (
 // lockify cache clear
 var clearCmd = &cobra.Command{
 	Use:   "cache clear",
-	Short: "Clear cached passphrase.",
+	Short: "Clear cached passphrases",
+	Long: `Clear all cached passphrases from the system keyring.
+
+This command removes all passphrases that were cached in the system keyring.
+You will be prompted for passphrases again on next use.`,
+	Example: `  lockify cache clear`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		di.GetLogger().Progress("clearing cached passphrases")
 		useCase := di.BuildClearCachedPassphrase()
