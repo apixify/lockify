@@ -74,3 +74,7 @@ func BuildGetEntry() app.GetEntryUseCase {
 func BuildInitializeVault() app.InitializeVaultUseCase {
 	return app.NewInitializeVaultUseCase(getVaultService())
 }
+
+func BuildListEntries() app.ListEntriesUseCase {
+	return app.NewListEntriesUseCase(getVaultService())
+}
