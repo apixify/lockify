@@ -1,77 +1,47 @@
 package cmd
 
 import (
-	"fmt"
-	"os"
-
 	"github.com/AlecAivazis/survey/v2"
-	"github.com/apixify/lockify/internal/service"
-	"github.com/apixify/lockify/internal/vault"
+	"github.com/apixify/lockify/internal/di"
 	"github.com/spf13/cobra"
 )
 
 // lockify rotate-key --env [env]
 var rotateCmd = &cobra.Command{
 	Use:   "rotate-key",
-	Short: "Decrypt all variables and export them in a specific format.",
+	Short: "Rotate the passphrase for a vault",
+	Long: `Rotate the passphrase for a vault.
+
+This command allows you to change the passphrase for a vault by re-encrypting all entries
+with a new passphrase. You will be prompted for the current passphrase and a new passphrase.`,
+	Example: `  lockify rotate-key --env prod
+  lockify rotate-key --env staging`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		env, err := cmd.Flags().GetString("env")
+		env, err := requireEnvFlag(cmd)
 		if err != nil {
-			return fmt.Errorf("failed to retrieve env flag")
-		}
-		if env == "" {
-			return fmt.Errorf("env is required")
-		}
-		fmt.Fprintf(os.Stderr, "⏳ Rotating passphrase for %s...\n", env)
-
-		passphraseService := service.NewPassphraseService(env)
-		passphraseService.ClearPassphrase()
-
-		vault, err := vault.Open(env)
-		if err != nil {
-			return fmt.Errorf("failed to open vault for environment %s: %w", env, err)
+			return err
 		}
 
-		passphrase := passphraseService.GetPassphrase()
-		passphraseService.ClearPassphrase()
-		if !vault.VerifyFingerPrint(passphrase) {
-			return fmt.Errorf("invalid credentials")
-		}
-
-		oldCryptoService, err := service.NewCryptoService(vault.Meta.Salt, passphrase)
-		if err != nil {
-			return fmt.Errorf("failed to initialize crypto service: %w", err)
-		}
-		vault.Meta.Salt, err = service.GenerateSalt(16)
-		if err != nil {
-			return fmt.Errorf("failed to generate salt")
-		}
+		var passphrase string
+		prompt := &survey.Password{Message: "Enter current passphrase:"}
+		survey.AskOne(prompt, &passphrase)
 
 		var newPassphrase string
-		prompt := &survey.Password{Message: "Enter new passphrase:"}
+		prompt = &survey.Password{Message: "Enter new passphrase:"}
 		survey.AskOne(prompt, &newPassphrase)
-		newCryptoService, err := service.NewCryptoService(vault.Meta.Salt, newPassphrase)
+
+		logger.Progress("Rotating passphrase for %s...\n", env)
+		ctx := getContext()
+		useCase := di.BuildRotatePassphrase()
+		err = useCase.Execute(ctx, env, passphrase, newPassphrase)
 		if err != nil {
-			return fmt.Errorf("failed to initialize crypto service: %w", err)
+			return err
 		}
 
-		vault.Meta.FingerPrint, err = vault.GenerateFingerprint(newPassphrase)
-		if err != nil {
-			return fmt.Errorf("failed to generate fingerprint")
-		}
+		clearCacheUseCase := di.BuildClearEnvCachedPassphrase()
+		clearCacheUseCase.Execute(ctx, env)
 
-		for key := range vault.Entries {
-			entry := vault.Entries[key]
-			entry.Value, _ = oldCryptoService.DecryptValue(entry.Value)
-			entry.Value, _ = newCryptoService.EncryptValue([]byte(entry.Value))
-
-			vault.Entries[key] = entry
-		}
-
-		err = vault.Save()
-		if err != nil {
-			return fmt.Errorf("failed to save vault")
-		}
+		logger.Success("Passphrase rotated successfully")
 
 		return nil
 	},
@@ -79,6 +49,7 @@ var rotateCmd = &cobra.Command{
 
 func init() {
 	rotateCmd.Flags().StringP("env", "e", "", "Environment Name")
+	rotateCmd.MarkFlagRequired("env")
 
 	rootCmd.AddCommand(rotateCmd)
 }

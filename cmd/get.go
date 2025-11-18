@@ -1,53 +1,41 @@
 package cmd
 
 import (
-	"errors"
-	"fmt"
-
-	"github.com/apixify/lockify/internal/service"
-	"github.com/apixify/lockify/internal/vault"
+	"github.com/apixify/lockify/internal/di"
 	"github.com/spf13/cobra"
 )
 
 // lockify get --env [env] --key [key]
 var getCmd = &cobra.Command{
 	Use:   "get",
-	Short: "get a secret from the vault",
+	Short: "Get a decrypted value from the vault",
+	Long: `Get a decrypted value from the vault.
+
+This command retrieves and decrypts a value from the vault for the specified key.
+The decrypted value is printed to stdout, making it suitable for shell scripting.`,
+	Example: `  lockify get --env prod --key DATABASE_URL
+  lockify get --env staging -k API_KEY`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		fmt.Println("⏳ getting a secret from the vault")
-		env, _ := cmd.Flags().GetString("env")
-		key, _ := cmd.Flags().GetString("key")
-		if env == "" {
-			return fmt.Errorf("env is required")
-		}
-		if key == "" {
-			return fmt.Errorf("key is required")
-		}
-		passphraseService := service.NewPassphraseService(env)
-		vault, err := vault.Open(env)
+		logger.Progress("getting an entry from the vault")
+		env, err := requireEnvFlag(cmd)
 		if err != nil {
-			return fmt.Errorf("failed to open vault for environment %s: %w", env, err)
+			return err
 		}
 
-		passphrase := passphraseService.GetPassphrase()
-		if !vault.VerifyFingerPrint(passphrase) {
-			passphraseService.ClearPassphrase()
-			return errors.New("invalid credentials")
-		}
-
-		entry, err := vault.GetEntry(key)
+		key, err := requireStringFlag(cmd, "key")
 		if err != nil {
-			return fmt.Errorf("%w", err)
+			return err
 		}
 
-		crypto, err := service.NewCryptoService(vault.Meta.Salt, passphrase)
+		ctx := getContext()
+		useCase := di.BuildGetEntry()
+		value, err := useCase.Execute(ctx, env, key)
 		if err != nil {
-			return fmt.Errorf("failed to initialize the crypto service")
+			return err
 		}
 
-		value, _ := crypto.DecryptValue(entry.Value)
-
-		fmt.Println(value)
+		logger.Success("retrieved key's value successfully")
+		logger.Output(value)
 
 		return nil
 	},
@@ -55,7 +43,8 @@ var getCmd = &cobra.Command{
 
 func init() {
 	getCmd.Flags().StringP("env", "e", "", "Environment name")
-	getCmd.Flags().StringP("key", "k", "", "The key to use for getting the secret")
+	getCmd.Flags().StringP("key", "k", "", "The key to use for getting the entry")
+	getCmd.MarkFlagRequired("env")
 
 	rootCmd.AddCommand(getCmd)
 }

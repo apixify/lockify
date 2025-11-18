@@ -1,79 +1,47 @@
 package cmd
 
 import (
-	"encoding/json"
 	"fmt"
-	"os"
 
-	"github.com/apixify/lockify/internal/service"
-	"github.com/apixify/lockify/internal/vault"
+	"github.com/apixify/lockify/internal/di"
+	"github.com/apixify/lockify/internal/domain/model/value"
 	"github.com/spf13/cobra"
 )
 
 // lockify export --env [env] --format [dotenv|json]
 // lockify export --env prod --format dotenv > .env
 // lockify export --env staging --format json > env.json
-const (
-	dotenvFormat = "dotenv"
-	jsonFormat   = "json"
-)
 
 var exportCmd = &cobra.Command{
 	Use:   "export",
-	Short: "Decrypt all variables and export them in a specific format.",
+	Short: "Export all decrypted variables in a specific format",
+	Long: `Export all decrypted variables in a specific format.
+
+This command decrypts all entries in the vault and exports them in the specified format.
+Use stdout redirection to save to a file (e.g., lockify export --env prod --format dotenv > .env).
+
+The output is written to stdout, making it suitable for shell redirection.`,
+	Example: `  lockify export --env prod --format dotenv > .env
+  lockify export --env staging --format json > env.json
+  lockify export --env local --format dotenv`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		envPassphraseKey, _ := cmd.Flags().GetString("passphrase-env")
-		env, err := cmd.Flags().GetString("env")
+		env, err := requireEnvFlag(cmd)
 		if err != nil {
-			return fmt.Errorf("failed to retrieve env flag")
+			return err
 		}
-		if env == "" {
-			return fmt.Errorf("env is required")
-		}
-		fmt.Fprintf(os.Stderr, "⏳ Exporting secrets for %s...\n", env)
 
-		format, err := cmd.Flags().GetString("format")
+		format, err := requireStringFlag(cmd, "format")
 		if err != nil {
-			return fmt.Errorf("failed to retrieve format flag")
-		}
-		if format == "" {
-			return fmt.Errorf("format is required")
-		}
-		if format != dotenvFormat && format != jsonFormat {
-			return fmt.Errorf("format must be either %s or %s. %s is given", dotenvFormat, jsonFormat, format)
+			return err
 		}
 
-		passphraseService := service.NewPassphraseService(env, envPassphraseKey)
-		vault, err := vault.Open(env)
+		expotFormat := value.NewFileFormat(format)
+		logger.Progress("Exporting entries for environment %s...\n", env)
+		ctx := getContext()
+		useCase := di.BuildExportEnv()
+		err = useCase.Execute(ctx, env, expotFormat)
 		if err != nil {
-			return fmt.Errorf("failed to open vault for environment %s: %w", env, err)
-		}
-
-		passphrase := passphraseService.GetPassphrase()
-		if !vault.VerifyFingerPrint(passphrase) {
-			passphraseService.ClearPassphrase()
-			return fmt.Errorf("invalid credentials")
-		}
-
-		crypto, err := service.NewCryptoService(vault.Meta.Salt, passphrase)
-		if err != nil {
-			return fmt.Errorf("failed to initialize crypto service: %w", err)
-		}
-
-		if format == dotenvFormat {
-			for k, v := range vault.Entries {
-				decryptedVal, _ := crypto.DecryptValue(v.Value)
-				fmt.Fprintf(os.Stdout, "%s=%s\n", k, decryptedVal)
-			}
-		} else {
-			mappedEntries := make(map[string]string)
-			for k, v := range vault.Entries {
-				decryptedVal, _ := crypto.DecryptValue(v.Value)
-				mappedEntries[k] = decryptedVal
-			}
-
-			data, _ := json.MarshalIndent(mappedEntries, "", "  ")
-			fmt.Println(string(data))
+			return fmt.Errorf("failed to export entries for environment %s: %w", env, err)
 		}
 
 		return nil
@@ -83,7 +51,7 @@ var exportCmd = &cobra.Command{
 func init() {
 	exportCmd.Flags().StringP("env", "e", "", "Environment Name")
 	exportCmd.Flags().String("format", "dotenv", "The format of the exported file [dotenv|json]")
-	exportCmd.Flags().String("passphrase-env", "LOCKIFY_PASSPHRASE", "Name of the environment variable that holds the passphrase")
+	exportCmd.MarkFlagRequired("env")
 
 	rootCmd.AddCommand(exportCmd)
 }

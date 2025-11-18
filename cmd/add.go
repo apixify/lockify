@@ -1,57 +1,43 @@
 package cmd
 
 import (
-	"errors"
-	"fmt"
-
 	"github.com/AlecAivazis/survey/v2"
-	"github.com/apixify/lockify/internal/service"
-	"github.com/apixify/lockify/internal/vault"
+	"github.com/apixify/lockify/internal/app"
+	"github.com/apixify/lockify/internal/di"
 	"github.com/spf13/cobra"
 )
 
 // lockify add --env [env]
 var addCmd = &cobra.Command{
 	Use:   "add",
-	Short: "add/update a new entry to the vault",
+	Short: "Add or update an entry in the vault",
+	Long: `Add or update an entry in the vault.
+
+This command prompts you for a key and value, then encrypts and stores the value in the vault.
+Use the --secret flag to hide the value input in the terminal.`,
+	Example: `  lockify add --env prod
+  lockify add --env staging --secret`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		env, _ := cmd.Flags().GetString("env")
-		if env == "" {
-			return fmt.Errorf("env is required")
+		logger.Progress("seting a new entry to the vault...")
+		env, err := requireEnvFlag(cmd)
+		if err != nil {
+			return err
 		}
 
-		fmt.Println("⏳ seting a new secret to the vault...")
 		isSecret, _ := cmd.Flags().GetBool("secret")
-		envPassphraseKey, _ := cmd.Flags().GetString("passphrase-env")
 		key, value := getUserInputForKeyAndValue(isSecret)
-		passphraseService := service.NewPassphraseService(env, envPassphraseKey)
-		vault, err := vault.Open(env)
+
+		ctx := getContext()
+		useCase := di.BuildAddEntry()
+		dto := app.AddEntryDTO{Env: env, Key: key, Value: value}
+
+		err = useCase.Execute(ctx, dto)
 		if err != nil {
-			return fmt.Errorf("failed to open vault for environment %s: %w", env, err)
+			logger.Error(err.Error())
+			return err
 		}
 
-		passphrase := passphraseService.GetPassphrase()
-		if !vault.VerifyFingerPrint(passphrase) {
-			passphraseService.ClearPassphrase()
-			return errors.New("invalid credentials")
-		}
-
-		crypto, err := service.NewCryptoService(vault.Meta.Salt, passphrase)
-		if err != nil {
-			return fmt.Errorf("failed to initialize crypto service: %w", err)
-		}
-		encryptedValue, err := crypto.EncryptValue([]byte(value))
-		if err != nil {
-			return fmt.Errorf("failed to encrypt value: %w", err)
-		}
-
-		vault.SetEntry(key, encryptedValue)
-		err = vault.Save()
-		if err != nil {
-			return fmt.Errorf("failed to save vault")
-		}
-
-		fmt.Printf("✅ key %s is added successfully.", key)
+		logger.Success("key %s is added successfully.", key)
 
 		return nil
 	},
@@ -60,6 +46,7 @@ var addCmd = &cobra.Command{
 func init() {
 	addCmd.Flags().StringP("env", "e", "", "Environment Name")
 	addCmd.Flags().BoolP("secret", "s", false, "States that value to set is a secret and should be hidden in the terminal")
+	addCmd.MarkFlagRequired("env")
 
 	rootCmd.AddCommand(addCmd)
 }

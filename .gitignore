@@ -35,6 +35,6 @@ Thumbs.db
 .env
 .env.*
 
-
+lockify
 # .lockify vaults
 .lockify/
