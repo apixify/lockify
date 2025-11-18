@@ -47,6 +47,10 @@ func getVaultService() service.VaultService {
 	return service.NewVaultService(getVaultRepository(), getPassphraseService(), getHashService())
 }
 
+func getImportService() service.ImportService {
+	return fs.NewFsImportService()
+}
+
 func GetLogger() domain.Logger {
 	return log
 }
@@ -81,4 +85,8 @@ func BuildListEntries() app.ListEntriesUseCase {
 
 func BuildRotatePassphrase() app.RotatePassphraseUseCase {
 	return app.NewRotatePassphraseUseCase(getVaultRepository(), getEncryptionService(), getHashService())
+}
+
+func BuildImportEnv() app.ImportEnvUseCase {
+	return app.NewImportEnvUseCase(getVaultService(), getImportService(), getEncryptionService(), GetLogger())
 }

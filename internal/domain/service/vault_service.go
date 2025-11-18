@@ -59,6 +59,10 @@ func (vs *VaultService) Create(ctx context.Context, env string) (*model.Vault, e
 }
 
 func (vs *VaultService) Open(ctx context.Context, env string) (*model.Vault, error) {
+	if exists, _ := vs.vaultRepo.Exists(ctx, env); !exists {
+		return nil, fmt.Errorf("vault for env %s does not exist", env)
+	}
+
 	passphrase, err := vs.passphraseService.Get(ctx, env)
 	if err != nil {
 		return nil, fmt.Errorf("failed to retrieve passphrase: %w", err)

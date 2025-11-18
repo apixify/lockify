@@ -5,6 +5,8 @@ type Logger interface {
 	Info(format string, args ...interface{})
 	// Error writes an error message to logs
 	Error(format string, args ...interface{})
+	// Warning writes a warning message to logs
+	Warning(format string, args ...interface{})
 	// Success writes a success message to logs
 	Success(format string, args ...interface{})
 	// Progress writes a progress message to logs
