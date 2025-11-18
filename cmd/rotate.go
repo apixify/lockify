@@ -38,6 +38,9 @@ with a new passphrase. You will be prompted for the current passphrase and a new
 			return err
 		}
 
+		clearCacheUseCase := di.BuildClearEnvCachedPassphrase()
+		clearCacheUseCase.Execute(ctx, env)
+
 		logger.Success("Passphrase rotated successfully")
 
 		return nil
