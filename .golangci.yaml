@@ -1,0 +1,76 @@
+version: "2"
+
+run:
+  timeout: 5m
+  tests: true
+
+linters:
+  enable:
+    - govet
+    - staticcheck
+    - errcheck
+    - ineffassign
+    - unused
+    - revive
+    - gocritic
+    - misspell
+    - nolintlint
+    - gocyclo
+    - goconst
+    - nakedret
+    - sqlclosecheck
+    - rowserrcheck
+    - noctx
+    - prealloc
+    - mnd
+    - depguard
+  settings:
+    errcheck:
+      check-type-assertions: true
+      check-blank: true
+
+    gocyclo:
+      min-complexity: 15
+
+    gocritic:
+      enabled-tags:
+        - diagnostic
+        - performance
+        - style
+        - opinionated
+
+    depguard:
+      rules:
+        main:
+          files:
+            - "$all"
+            - "!$test"
+          list-mode: lax
+          allow:
+            - $gostd
+            - github.com/AlecAivazis/survey/v2
+            - github.com/apixify/lockify/internal
+          deny:
+            - pkg: github.com/jessevdk/go-flags
+              desc: "Use cobra instead"
+
+    revive:
+      severity: warning
+      rules:
+        - name: var-naming
+        - name: exported
+        - name: indent-error-flow
+        - name: early-return
+        - name: range-val-in-closure
+        - name: unexported-return
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
+    - gofumpt
+    - golines
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0

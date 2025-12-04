@@ -11,6 +11,7 @@
 
 # Output of the Go coverage tool
 *.coverprofile
+coverage.out
 
 # Go module cache
 vendor/
