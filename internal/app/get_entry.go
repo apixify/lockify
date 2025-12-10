@@ -6,13 +6,17 @@ import (
 	"github.com/ahmed-abdelgawad92/lockify/internal/domain/service"
 )
 
+type GetEntryUc interface {
+	Execute(ctx context.Context, env, key string) (string, error)
+}
+
 type GetEntryUseCase struct {
 	vaultService      service.VaultServiceInterface
 	encryptionService service.EncryptionService
 }
 
-func NewGetEntryUseCase(vaultService service.VaultServiceInterface, encryptionService service.EncryptionService) GetEntryUseCase {
-	return GetEntryUseCase{vaultService, encryptionService}
+func NewGetEntryUseCase(vaultService service.VaultServiceInterface, encryptionService service.EncryptionService) GetEntryUc {
+	return &GetEntryUseCase{vaultService, encryptionService}
 }
 
 func (useCase *GetEntryUseCase) Execute(ctx context.Context, env, key string) (string, error) {

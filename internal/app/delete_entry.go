@@ -7,12 +7,16 @@ import (
 	"github.com/ahmed-abdelgawad92/lockify/internal/domain/service"
 )
 
+type DeleteEntryUc interface {
+	Execute(ctx context.Context, env, key string) error
+}
+
 type DeleteEntryUseCase struct {
 	vaultService service.VaultServiceInterface
 }
 
-func NewDeleteEntryUseCase(vaultService service.VaultServiceInterface) DeleteEntryUseCase {
-	return DeleteEntryUseCase{vaultService}
+func NewDeleteEntryUseCase(vaultService service.VaultServiceInterface) DeleteEntryUc {
+	return &DeleteEntryUseCase{vaultService}
 }
 
 func (useCase *DeleteEntryUseCase) Execute(ctx context.Context, env, key string) error {

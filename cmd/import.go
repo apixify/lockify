@@ -4,62 +4,75 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/ahmed-abdelgawad92/lockify/internal/app"
 	"github.com/ahmed-abdelgawad92/lockify/internal/di"
+	"github.com/ahmed-abdelgawad92/lockify/internal/domain"
 	"github.com/ahmed-abdelgawad92/lockify/internal/domain/model/value"
 	"github.com/spf13/cobra"
 )
 
-// lockify import .env --env prod --format dotenv
-// lockify import config.json --env staging --format json
-var importCmd = &cobra.Command{
-	Use:   "import [file]",
-	Short: "Import variables from a file into the vault",
-	Long: `Import variables from a file into the vault.
+type ImportCommand struct {
+	useCase app.ImportEnvUc
+	logger  domain.Logger
+}
+
+func NewImportCommand(useCase app.ImportEnvUc, logger domain.Logger) *cobra.Command {
+	cmd := &ImportCommand{useCase, logger}
+
+	// lockify import .env --env prod --format dotenv
+	// lockify import config.json --env staging --format json
+	return &cobra.Command{
+		Use:   "import [file]",
+		Short: "Import variables from a file into the vault",
+		Long: `Import variables from a file into the vault.
 
 This command reads variables from a file and imports them into the vault.
 Supported formats are dotenv (.env) and JSON.
 
 If no file is specified, the command reads from stdin.`,
-	Example: `  lockify import .env --env prod --format dotenv
+		Example: `  lockify import .env --env prod --format dotenv
   lockify import config.json --env staging --format json
   cat .env | lockify import --env local --format dotenv`,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		env, err := requireEnvFlag(cmd)
-		if err != nil {
-			return err
-		}
+		RunE: cmd.runE,
+	}
+}
 
-		overwrite, _ := cmd.Flags().GetBool("overwrite")
-		format, err := requireStringFlag(cmd, "format")
-		if err != nil {
-			return fmt.Errorf("failed to retrieve format flag: %w", err)
-		}
+func (c *ImportCommand) runE(cmd *cobra.Command, args []string) error {
+	env, err := requireEnvFlag(cmd)
+	if err != nil {
+		return err
+	}
 
-		fileFormat, err := value.NewFileFormat(format)
-		if err != nil {
-			return err
-		}
+	overwrite, _ := cmd.Flags().GetBool("overwrite")
+	format, err := requireStringFlag(cmd, "format")
+	if err != nil {
+		return fmt.Errorf("failed to retrieve format flag: %w", err)
+	}
 
-		file, filename, err := getFile(args)
-		if err != nil {
-			return err
-		}
+	fileFormat, err := value.NewFileFormat(format)
+	if err != nil {
+		return err
+	}
 
-		logger.Progress("Importing variables from %s...", filename)
-		ctx := getContext()
-		useCase := di.BuildImportEnv()
-		imported, skipped, err := useCase.Execute(ctx, env, fileFormat, file, overwrite)
-		if err != nil {
-			return fmt.Errorf("failed to import env variables: %w", err)
-		}
+	file, filename, err := getFile(args)
+	if err != nil {
+		return err
+	}
 
-		logger.Success("Imported %d key(s), skipped %d key(s)", imported, skipped)
+	c.logger.Progress("Importing variables from %s...", filename)
+	ctx := getContext()
+	imported, skipped, err := c.useCase.Execute(ctx, env, fileFormat, file, overwrite)
+	if err != nil {
+		return fmt.Errorf("failed to import env variables: %w", err)
+	}
 
-		return nil
-	},
+	c.logger.Success("Imported %d key(s), skipped %d key(s)", imported, skipped)
+
+	return nil
 }
 
 func init() {
+	importCmd := NewImportCommand(di.BuildImportEnv(), di.GetLogger())
 	importCmd.Flags().StringP("env", "e", "", "Environment name")
 	importCmd.Flags().String("format", "dotenv", "Input format (dotenv|json)")
 	importCmd.Flags().Bool("overwrite", false, "Overwrite existing keys")

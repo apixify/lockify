@@ -6,12 +6,15 @@ import (
 	"github.com/ahmed-abdelgawad92/lockify/internal/domain/service"
 )
 
+type ListEntriesUc interface {
+	Execute(ctx context.Context, env string) ([]string, error)
+}
 type ListEntriesUseCase struct {
 	vaultService service.VaultServiceInterface
 }
 
-func NewListEntriesUseCase(vaultService service.VaultServiceInterface) ListEntriesUseCase {
-	return ListEntriesUseCase{vaultService}
+func NewListEntriesUseCase(vaultService service.VaultServiceInterface) ListEntriesUc {
+	return &ListEntriesUseCase{vaultService}
 }
 
 func (useCase *ListEntriesUseCase) Execute(ctx context.Context, env string) ([]string, error) {

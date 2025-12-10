@@ -10,6 +10,10 @@ import (
 	"github.com/ahmed-abdelgawad92/lockify/internal/domain/service"
 )
 
+type ImportEnvUc interface {
+	Execute(ctx context.Context, env string, format value.FileFormat, r io.Reader, overwrite bool) (int, int, error)
+}
+
 type ImportEnvUseCase struct {
 	vaultService      service.VaultServiceInterface
 	importService     service.ImportService
@@ -22,8 +26,8 @@ func NewImportEnvUseCase(
 	importService service.ImportService,
 	encryptionService service.EncryptionService,
 	logger domain.Logger,
-) ImportEnvUseCase {
-	return ImportEnvUseCase{vaultService, importService, encryptionService, logger}
+) ImportEnvUc {
+	return &ImportEnvUseCase{vaultService, importService, encryptionService, logger}
 }
 
 func (useCase *ImportEnvUseCase) Execute(ctx context.Context, env string, format value.FileFormat, r io.Reader, overwrite bool) (int, int, error) {

@@ -7,6 +7,10 @@ import (
 	"github.com/ahmed-abdelgawad92/lockify/internal/domain/service"
 )
 
+type AddEntryUc interface {
+	Execute(context.Context, AddEntryDTO) error
+}
+
 type AddEntryUseCase struct {
 	vaultService      service.VaultServiceInterface
 	encryptionService service.EncryptionService
@@ -21,8 +25,8 @@ type AddEntryDTO struct {
 func NewAddEntryUseCase(
 	vaultService service.VaultServiceInterface,
 	encryptionService service.EncryptionService,
-) AddEntryUseCase {
-	return AddEntryUseCase{vaultService, encryptionService}
+) AddEntryUc {
+	return &AddEntryUseCase{vaultService, encryptionService}
 }
 
 func (useCase *AddEntryUseCase) Execute(ctx context.Context, dto AddEntryDTO) error {

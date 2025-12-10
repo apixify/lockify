@@ -9,6 +9,10 @@ import (
 	"github.com/ahmed-abdelgawad92/lockify/internal/domain/service"
 )
 
+type ExportEnvUc interface {
+	Execute(ctx context.Context, env string, exportFormat value.FileFormat) error
+}
+
 type ExportEnvUseCase struct {
 	vaultService      service.VaultServiceInterface
 	encryptionService service.EncryptionService
@@ -19,8 +23,8 @@ func NewExportEnvUseCase(
 	vaultService service.VaultServiceInterface,
 	encryptionService service.EncryptionService,
 	logger domain.Logger,
-) ExportEnvUseCase {
-	return ExportEnvUseCase{vaultService, encryptionService, logger}
+) ExportEnvUc {
+	return &ExportEnvUseCase{vaultService, encryptionService, logger}
 }
 
 func (useCase *ExportEnvUseCase) Execute(ctx context.Context, env string, exportFormat value.FileFormat) error {

@@ -2,52 +2,65 @@ package cmd
 
 import (
 	"github.com/AlecAivazis/survey/v2"
+	"github.com/ahmed-abdelgawad92/lockify/internal/app"
 	"github.com/ahmed-abdelgawad92/lockify/internal/di"
+	"github.com/ahmed-abdelgawad92/lockify/internal/domain"
 	"github.com/spf13/cobra"
 )
 
-// lockify rotate-key --env [env]
-var rotateCmd = &cobra.Command{
-	Use:   "rotate-key",
-	Short: "Rotate the passphrase for a vault",
-	Long: `Rotate the passphrase for a vault.
+type RotateCommand struct {
+	useCase app.RotatePassphraseUc
+	logger  domain.Logger
+}
+
+func NewRotateCommand(useCase app.RotatePassphraseUc, logger domain.Logger) *cobra.Command {
+	cmd := &RotateCommand{useCase, logger}
+
+	// lockify rotate-key --env [env]
+	return &cobra.Command{
+		Use:   "rotate-key",
+		Short: "Rotate the passphrase for a vault",
+		Long: `Rotate the passphrase for a vault.
 
 This command allows you to change the passphrase for a vault by re-encrypting all entries
 with a new passphrase. You will be prompted for the current passphrase and a new passphrase.`,
-	Example: `  lockify rotate-key --env prod
+		Example: `  lockify rotate-key --env prod
   lockify rotate-key --env staging`,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		env, err := requireEnvFlag(cmd)
-		if err != nil {
-			return err
-		}
+		RunE: cmd.runE,
+	}
+}
 
-		var passphrase string
-		prompt := &survey.Password{Message: "Enter current passphrase:"}
-		survey.AskOne(prompt, &passphrase)
+func (c *RotateCommand) runE(cmd *cobra.Command, args []string) error {
+	env, err := requireEnvFlag(cmd)
+	if err != nil {
+		return err
+	}
 
-		var newPassphrase string
-		prompt = &survey.Password{Message: "Enter new passphrase:"}
-		survey.AskOne(prompt, &newPassphrase)
+	var passphrase string
+	prompt := &survey.Password{Message: "Enter current passphrase:"}
+	survey.AskOne(prompt, &passphrase)
 
-		logger.Progress("Rotating passphrase for %s...\n", env)
-		ctx := getContext()
-		useCase := di.BuildRotatePassphrase()
-		err = useCase.Execute(ctx, env, passphrase, newPassphrase)
-		if err != nil {
-			return err
-		}
+	var newPassphrase string
+	prompt = &survey.Password{Message: "Enter new passphrase:"}
+	survey.AskOne(prompt, &newPassphrase)
 
-		clearCacheUseCase := di.BuildClearEnvCachedPassphrase()
-		clearCacheUseCase.Execute(ctx, env)
+	c.logger.Progress("Rotating passphrase for %s...\n", env)
+	ctx := getContext()
+	err = c.useCase.Execute(ctx, env, passphrase, newPassphrase)
+	if err != nil {
+		return err
+	}
 
-		logger.Success("Passphrase rotated successfully")
+	clearCacheUseCase := di.BuildClearEnvCachedPassphrase()
+	clearCacheUseCase.Execute(ctx, env)
 
-		return nil
-	},
+	c.logger.Success("Passphrase rotated successfully")
+
+	return nil
 }
 
 func init() {
+	rotateCmd := NewRotateCommand(di.BuildRotatePassphrase(), di.GetLogger())
 	rotateCmd.Flags().StringP("env", "e", "", "Environment Name")
 	rotateCmd.MarkFlagRequired("env")
 

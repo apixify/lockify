@@ -4,46 +4,58 @@ import (
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/ahmed-abdelgawad92/lockify/internal/app"
 	"github.com/ahmed-abdelgawad92/lockify/internal/di"
+	"github.com/ahmed-abdelgawad92/lockify/internal/domain"
 	"github.com/spf13/cobra"
 )
 
-// lockify add --env [env]
-var addCmd = &cobra.Command{
-	Use:   "add",
-	Short: "Add or update an entry in the vault",
-	Long: `Add or update an entry in the vault.
+type AddCommand struct {
+	useCase app.AddEntryUc
+	logger  domain.Logger
+}
 
-This command prompts you for a key and value, then encrypts and stores the value in the vault.
-Use the --secret flag to hide the value input in the terminal.`,
-	Example: `  lockify add --env prod
-  lockify add --env staging --secret`,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		logger.Progress("seting a new entry to the vault...")
-		env, err := requireEnvFlag(cmd)
-		if err != nil {
-			return err
-		}
+func NewAddCommand(addUc app.AddEntryUc, logger domain.Logger) *cobra.Command {
+	cmd := &AddCommand{useCase: addUc, logger: logger}
 
-		isSecret, _ := cmd.Flags().GetBool("secret")
-		key, value := getUserInputForKeyAndValue(isSecret)
+	// lockify add --env [env]
+	return &cobra.Command{
+		Use:   "add",
+		Short: "Add or update an entry in the vault",
+		Long: `Add or update an entry in the vault.
 
-		ctx := getContext()
-		useCase := di.BuildAddEntry()
-		dto := app.AddEntryDTO{Env: env, Key: key, Value: value}
+	This command prompts you for a key and value, then encrypts and stores the value in the vault.
+	Use the --secret flag to hide the value input in the terminal.`,
+		Example: `  lockify add --env prod
+	lockify add --env staging --secret`,
+		RunE: cmd.runE,
+	}
+}
 
-		err = useCase.Execute(ctx, dto)
-		if err != nil {
-			logger.Error(err.Error())
-			return err
-		}
+func (c *AddCommand) runE(cmd *cobra.Command, args []string) error {
+	c.logger.Progress("seting a new entry to the vault...")
+	env, err := requireEnvFlag(cmd)
+	if err != nil {
+		return err
+	}
 
-		logger.Success("key %s is added successfully.", key)
+	isSecret, _ := cmd.Flags().GetBool("secret")
+	key, value := getUserInputForKeyAndValue(isSecret)
 
-		return nil
-	},
+	ctx := getContext()
+	dto := app.AddEntryDTO{Env: env, Key: key, Value: value}
+
+	err = c.useCase.Execute(ctx, dto)
+	if err != nil {
+		c.logger.Error(err.Error())
+		return err
+	}
+
+	c.logger.Success("key %s is added successfully.", key)
+
+	return nil
 }
 
 func init() {
+	addCmd := NewAddCommand(di.BuildAddEntry(), di.GetLogger())
 	addCmd.Flags().StringP("env", "e", "", "Environment Name")
 	addCmd.Flags().BoolP("secret", "s", false, "States that value to set is a secret and should be hidden in the terminal")
 	addCmd.MarkFlagRequired("env")

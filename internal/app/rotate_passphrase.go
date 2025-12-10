@@ -8,6 +8,10 @@ import (
 	"github.com/ahmed-abdelgawad92/lockify/internal/domain/service"
 )
 
+type RotatePassphraseUc interface {
+	Execute(ctx context.Context, env, currentPassphrase, newPassphrase string) error
+}
+
 type RotatePassphraseUseCase struct {
 	vaultRepo         repository.VaultRepository
 	encryptionService service.EncryptionService
@@ -18,8 +22,8 @@ func NewRotatePassphraseUseCase(
 	vaultRepo repository.VaultRepository,
 	encryptionService service.EncryptionService,
 	hashService service.HashService,
-) RotatePassphraseUseCase {
-	return RotatePassphraseUseCase{vaultRepo, encryptionService, hashService}
+) RotatePassphraseUc {
+	return &RotatePassphraseUseCase{vaultRepo, encryptionService, hashService}
 }
 
 func (useCase *RotatePassphraseUseCase) Execute(ctx context.Context, env, currentPassphrase, newPassphrase string) error {

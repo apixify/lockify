@@ -55,11 +55,11 @@ func GetLogger() domain.Logger {
 	return log
 }
 
-func BuildAddEntry() app.AddEntryUseCase {
+func BuildAddEntry() app.AddEntryUc {
 	return app.NewAddEntryUseCase(getVaultService(), getEncryptionService())
 }
 
-func BuildClearCachedPassphrase() app.ClearCachedPassphraseUseCase {
+func BuildClearCachedPassphrase() app.ClearCachedPassphraseUc {
 	return app.NewClearCachedPassphraseUseCase(getPassphraseService())
 }
 
@@ -67,30 +67,30 @@ func BuildClearEnvCachedPassphrase() app.ClearEnvCachedPassphraseUseCase {
 	return app.NewClearEnvCachedPassphraseUseCase(getPassphraseService())
 }
 
-func BuildDeleteEntry() app.DeleteEntryUseCase {
+func BuildDeleteEntry() app.DeleteEntryUc {
 	return app.NewDeleteEntryUseCase(getVaultService())
 }
 
-func BuildExportEnv() app.ExportEnvUseCase {
+func BuildExportEnv() app.ExportEnvUc {
 	return app.NewExportEnvUseCase(getVaultService(), getEncryptionService(), GetLogger())
 }
 
-func BuildGetEntry() app.GetEntryUseCase {
+func BuildGetEntry() app.GetEntryUc {
 	return app.NewGetEntryUseCase(getVaultService(), getEncryptionService())
 }
 
-func BuildInitializeVault() app.InitializeVaultUseCase {
+func BuildInitializeVault() app.InitUc {
 	return app.NewInitializeVaultUseCase(getVaultService())
 }
 
-func BuildListEntries() app.ListEntriesUseCase {
+func BuildListEntries() app.ListEntriesUc {
 	return app.NewListEntriesUseCase(getVaultService())
 }
 
-func BuildRotatePassphrase() app.RotatePassphraseUseCase {
+func BuildRotatePassphrase() app.RotatePassphraseUc {
 	return app.NewRotatePassphraseUseCase(getVaultRepository(), getEncryptionService(), getHashService())
 }
 
-func BuildImportEnv() app.ImportEnvUseCase {
+func BuildImportEnv() app.ImportEnvUc {
 	return app.NewImportEnvUseCase(getVaultService(), getImportService(), getEncryptionService(), GetLogger())
 }
