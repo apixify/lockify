@@ -15,7 +15,7 @@ var rootCmd = &cobra.Command{
 
 Lockify encrypts your environment variables using AES-GCM encryption with Argon2 key derivation.
 Your secrets are protected with a passphrase that can be stored securely in your system's keyring.`,
-	Version: "0.1.0",
+	Version: Version,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Fprintln(os.Stderr, "Welcome to Lockify! Use --help to see available commands.")
 	},
