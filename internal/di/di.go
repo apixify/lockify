@@ -11,6 +11,7 @@ import (
 	"github.com/ahmed-abdelgawad92/lockify/internal/infrastructure/crypto"
 	"github.com/ahmed-abdelgawad92/lockify/internal/infrastructure/fs"
 	"github.com/ahmed-abdelgawad92/lockify/internal/infrastructure/logger"
+	"github.com/ahmed-abdelgawad92/lockify/internal/infrastructure/prompt"
 )
 
 var (
@@ -57,6 +58,10 @@ func GetLogger() domain.Logger {
 
 func BuildAddEntry() app.AddEntryUc {
 	return app.NewAddEntryUseCase(getVaultService(), getEncryptionService())
+}
+
+func BuildPromptService() service.PromptService {
+	return prompt.NewPromptService()
 }
 
 func BuildClearCachedPassphrase() app.ClearCachedPassphraseUc {

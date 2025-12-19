@@ -3,10 +3,12 @@ package app
 import (
 	"context"
 	"errors"
-	"strings"
+	"fmt"
 	"testing"
 
 	"github.com/ahmed-abdelgawad92/lockify/internal/domain/model"
+	"github.com/ahmed-abdelgawad92/lockify/test"
+	"github.com/ahmed-abdelgawad92/lockify/test/assert"
 )
 
 func TestRotatePassphraseUseCase_Execute_Success(t *testing.T) {
@@ -26,7 +28,7 @@ func TestRotatePassphraseUseCase_Execute_Success(t *testing.T) {
 	decryptCallCount := 0
 	encryptCallCount := 0
 
-	vaultRepo := &mockVaultRepository{
+	vaultRepo := &test.MockVaultRepository{
 		LoadFunc: func(ctx context.Context, env string) (*model.Vault, error) {
 			return vault, nil
 		},
@@ -36,7 +38,7 @@ func TestRotatePassphraseUseCase_Execute_Success(t *testing.T) {
 		},
 	}
 
-	encryptionService := &mockEncryptionService{
+	encryptionService := &test.MockEncryptionService{
 		DecryptFunc: func(ciphertext, encodedSalt, passphrase string) ([]byte, error) {
 			decryptCallCount++
 			if encodedSalt != currentSalt {
@@ -59,7 +61,7 @@ func TestRotatePassphraseUseCase_Execute_Success(t *testing.T) {
 		},
 	}
 
-	hashService := &mockHashService{
+	hashService := &test.MockHashService{
 		VerifyFunc: func(hashedPassphrase, passphrase string) error {
 			if hashedPassphrase != currentFingerprint {
 				t.Errorf("Verify() called with fingerprint %q, want %q", hashedPassphrase, currentFingerprint)
@@ -86,98 +88,69 @@ func TestRotatePassphraseUseCase_Execute_Success(t *testing.T) {
 	useCase := NewRotatePassphraseUseCase(vaultRepo, encryptionService, hashService)
 
 	err := useCase.Execute(context.Background(), env, currentPassphrase, newPassphrase)
-	if err != nil {
-		t.Fatalf("Execute() returned unexpected error: %v", err)
-	}
+	assert.Nil(t, err, fmt.Sprintf("Execute() returned unexpected error: %v", err))
 
 	// Verify vault was saved with new salt and fingerprint
-	if savedVault == nil {
-		t.Fatal("Execute() should call Save() with the vault, but Save() was not called")
-	}
-
-	if savedVault.Meta.Salt != newSalt {
-		t.Errorf("Execute() should update salt to %q, got %q", newSalt, savedVault.Meta.Salt)
-	}
-
-	if savedVault.Meta.FingerPrint != newFingerprint {
-		t.Errorf("Execute() should update fingerprint to %q, got %q", newFingerprint, savedVault.Meta.FingerPrint)
-	}
+	assert.NotNil(t, savedVault, "Execute() should call Save() with the vault, but Save() was not called")
+	assert.Equal(t, newSalt, savedVault.Meta.Salt, fmt.Sprintf("Execute() should update salt to %q, got %q", newSalt, savedVault.Meta.Salt))
+	assert.Equal(t, newFingerprint, savedVault.Meta.FingerPrint, fmt.Sprintf("Execute() should update fingerprint to %q, got %q", newFingerprint, savedVault.Meta.FingerPrint))
 
 	// Verify all entries were re-encrypted
-	if decryptCallCount != 2 {
-		t.Errorf("Execute() should decrypt 2 entries, decrypted %d", decryptCallCount)
-	}
-
-	if encryptCallCount != 2 {
-		t.Errorf("Execute() should encrypt 2 entries, encrypted %d", encryptCallCount)
-	}
+	assert.Equal(t, 2, decryptCallCount, fmt.Sprintf("Execute() should decrypt 2 entries, decrypted %d", decryptCallCount))
+	assert.Equal(t, 2, encryptCallCount, fmt.Sprintf("Execute() should encrypt 2 entries, encrypted %d", encryptCallCount))
 
 	// Verify entries have new encrypted values
 	entry1, _ := savedVault.GetEntry("key1")
-	if entry1.Value != "new-encrypted-value" {
-		t.Errorf("Execute() should update entry1 value, got %q", entry1.Value)
-	}
-
 	entry2, _ := savedVault.GetEntry("key2")
-	if entry2.Value != "new-encrypted-value" {
-		t.Errorf("Execute() should update entry2 value, got %q", entry2.Value)
-	}
+
+	assert.Equal(t, "new-encrypted-value", entry1.Value, fmt.Sprintf("Execute() should update entry1 value, got %q", entry1.Value))
+	assert.Equal(t, "new-encrypted-value", entry2.Value, fmt.Sprintf("Execute() should update entry2 value, got %q", entry2.Value))
 }
 
 func TestRotatePassphraseUseCase_Execute_LoadError(t *testing.T) {
-	vaultRepo := &mockVaultRepository{
+	vaultRepo := &test.MockVaultRepository{
 		LoadFunc: func(ctx context.Context, env string) (*model.Vault, error) {
 			return nil, errors.New("load error")
 		},
 	}
 
-	useCase := NewRotatePassphraseUseCase(vaultRepo, &mockEncryptionService{}, &mockHashService{})
+	useCase := NewRotatePassphraseUseCase(vaultRepo, &test.MockEncryptionService{}, &test.MockHashService{})
 
 	err := useCase.Execute(context.Background(), "test", "old", "new")
-	if err == nil {
-		t.Fatal("Execute() with load error expected error, got nil")
-	}
-
-	if !strings.Contains(err.Error(), "failed to open vault for environment") {
-		t.Errorf("Execute() error = %q, want to contain 'failed to open vault for environment'", err.Error())
-	}
+	assert.NotNil(t, err, "Execute() with load error expected error, got nil")
+	assert.Contains(t, "failed to open vault for environment", err.Error(), fmt.Sprintf("Execute() error = %q, want to contain 'failed to open vault for environment'", err.Error()))
 }
 
 func TestRotatePassphraseUseCase_Execute_VerifyError(t *testing.T) {
 	vault, _ := model.NewVault("test", "fingerprint", "salt")
-	vaultRepo := &mockVaultRepository{
+	vaultRepo := &test.MockVaultRepository{
 		LoadFunc: func(ctx context.Context, env string) (*model.Vault, error) {
 			return vault, nil
 		},
 	}
 
-	hashService := &mockHashService{
+	hashService := &test.MockHashService{
 		VerifyFunc: func(hashedPassphrase, passphrase string) error {
 			return errors.New("invalid passphrase")
 		},
 	}
 
-	useCase := NewRotatePassphraseUseCase(vaultRepo, &mockEncryptionService{}, hashService)
+	useCase := NewRotatePassphraseUseCase(vaultRepo, &test.MockEncryptionService{}, hashService)
 
 	err := useCase.Execute(context.Background(), "test", "wrong", "new")
-	if err == nil {
-		t.Fatal("Execute() with invalid passphrase expected error, got nil")
-	}
-
-	if !strings.Contains(err.Error(), "invalid credentials") {
-		t.Errorf("Execute() error = %q, want to contain 'invalid credentials'", err.Error())
-	}
+	assert.NotNil(t, err, "Execute() with invalid passphrase expected error, got nil")
+	assert.Contains(t, "invalid credentials", err.Error(), fmt.Sprintf("Execute() error = %q, want to contain 'invalid credentials'", err.Error()))
 }
 
 func TestRotatePassphraseUseCase_Execute_GenerateSaltError(t *testing.T) {
 	vault, _ := model.NewVault("test", "fingerprint", "salt")
-	vaultRepo := &mockVaultRepository{
+	vaultRepo := &test.MockVaultRepository{
 		LoadFunc: func(ctx context.Context, env string) (*model.Vault, error) {
 			return vault, nil
 		},
 	}
 
-	hashService := &mockHashService{
+	hashService := &test.MockHashService{
 		VerifyFunc: func(hashedPassphrase, passphrase string) error {
 			return nil
 		},
@@ -186,27 +159,22 @@ func TestRotatePassphraseUseCase_Execute_GenerateSaltError(t *testing.T) {
 		},
 	}
 
-	useCase := NewRotatePassphraseUseCase(vaultRepo, &mockEncryptionService{}, hashService)
+	useCase := NewRotatePassphraseUseCase(vaultRepo, &test.MockEncryptionService{}, hashService)
 
 	err := useCase.Execute(context.Background(), "test", "old", "new")
-	if err == nil {
-		t.Fatal("Execute() with salt error expected error, got nil")
-	}
-
-	if !strings.Contains(err.Error(), "failed to generate salt") {
-		t.Errorf("Execute() error = %q, want to contain 'failed to generate salt'", err.Error())
-	}
+	assert.NotNil(t, err, "Execute() with salt error expected error, got nil")
+	assert.Contains(t, "failed to generate salt", err.Error(), fmt.Sprintf("Execute() error = %q, want to contain 'failed to generate salt'", err.Error()))
 }
 
 func TestRotatePassphraseUseCase_Execute_HashError(t *testing.T) {
 	vault, _ := model.NewVault("test", "fingerprint", "salt")
-	vaultRepo := &mockVaultRepository{
+	vaultRepo := &test.MockVaultRepository{
 		LoadFunc: func(ctx context.Context, env string) (*model.Vault, error) {
 			return vault, nil
 		},
 	}
 
-	hashService := &mockHashService{
+	hashService := &test.MockHashService{
 		VerifyFunc: func(hashedPassphrase, passphrase string) error {
 			return nil
 		},
@@ -218,22 +186,17 @@ func TestRotatePassphraseUseCase_Execute_HashError(t *testing.T) {
 		},
 	}
 
-	useCase := NewRotatePassphraseUseCase(vaultRepo, &mockEncryptionService{}, hashService)
+	useCase := NewRotatePassphraseUseCase(vaultRepo, &test.MockEncryptionService{}, hashService)
 
 	err := useCase.Execute(context.Background(), "test", "old", "new")
-	if err == nil {
-		t.Fatal("Execute() with hash error expected error, got nil")
-	}
-
-	if !strings.Contains(err.Error(), "failed to hash the fingerprint") {
-		t.Errorf("Execute() error = %q, want to contain 'failed to hash the fingerprint'", err.Error())
-	}
+	assert.NotNil(t, err, "Execute() with hash error expected error, got nil")
+	assert.Contains(t, "failed to hash the fingerprint", err.Error(), fmt.Sprintf("Execute() error = %q, want to contain 'failed to hash the fingerprint'", err.Error()))
 }
 
 func TestRotatePassphraseUseCase_Execute_DecryptError(t *testing.T) {
 	vault, _ := model.NewVault("test", "fingerprint", "salt")
 	vault.SetEntry("key1", "encrypted-value")
-	vaultRepo := &mockVaultRepository{
+	vaultRepo := &test.MockVaultRepository{
 		LoadFunc: func(ctx context.Context, env string) (*model.Vault, error) {
 			v, _ := model.NewVault(env, "fingerprint", "salt")
 			v.SetEntry("key1", "encrypted-value")
@@ -241,13 +204,13 @@ func TestRotatePassphraseUseCase_Execute_DecryptError(t *testing.T) {
 		},
 	}
 
-	encryptionService := &mockEncryptionService{
+	encryptionService := &test.MockEncryptionService{
 		DecryptFunc: func(ciphertext, encodedSalt, passphrase string) ([]byte, error) {
 			return nil, errors.New("decrypt error")
 		},
 	}
 
-	hashService := &mockHashService{
+	hashService := &test.MockHashService{
 		VerifyFunc: func(hashedPassphrase, passphrase string) error {
 			return nil
 		},
@@ -262,19 +225,14 @@ func TestRotatePassphraseUseCase_Execute_DecryptError(t *testing.T) {
 	useCase := NewRotatePassphraseUseCase(vaultRepo, encryptionService, hashService)
 
 	err := useCase.Execute(context.Background(), "test", "old", "new")
-	if err == nil {
-		t.Fatal("Execute() with decrypt error expected error, got nil")
-	}
-
-	if !strings.Contains(err.Error(), "failed to decrypt key") {
-		t.Errorf("Execute() error = %q, want to contain 'failed to decrypt key'", err.Error())
-	}
+	assert.NotNil(t, err, "Execute() with decrypt error expected error, got nil")
+	assert.Contains(t, "failed to decrypt key", err.Error(), fmt.Sprintf("Execute() error = %q, want to contain 'failed to decrypt key'", err.Error()))
 }
 
 func TestRotatePassphraseUseCase_Execute_EncryptError(t *testing.T) {
 	vault, _ := model.NewVault("test", "fingerprint", "salt")
 	vault.SetEntry("key1", "encrypted-value")
-	vaultRepo := &mockVaultRepository{
+	vaultRepo := &test.MockVaultRepository{
 		LoadFunc: func(ctx context.Context, env string) (*model.Vault, error) {
 			v, _ := model.NewVault(env, "fingerprint", "salt")
 			v.SetEntry("key1", "encrypted-value")
@@ -282,7 +240,7 @@ func TestRotatePassphraseUseCase_Execute_EncryptError(t *testing.T) {
 		},
 	}
 
-	encryptionService := &mockEncryptionService{
+	encryptionService := &test.MockEncryptionService{
 		DecryptFunc: func(ciphertext, encodedSalt, passphrase string) ([]byte, error) {
 			return []byte("decrypted"), nil
 		},
@@ -291,7 +249,7 @@ func TestRotatePassphraseUseCase_Execute_EncryptError(t *testing.T) {
 		},
 	}
 
-	hashService := &mockHashService{
+	hashService := &test.MockHashService{
 		VerifyFunc: func(hashedPassphrase, passphrase string) error {
 			return nil
 		},
@@ -306,18 +264,13 @@ func TestRotatePassphraseUseCase_Execute_EncryptError(t *testing.T) {
 	useCase := NewRotatePassphraseUseCase(vaultRepo, encryptionService, hashService)
 
 	err := useCase.Execute(context.Background(), "test", "old", "new")
-	if err == nil {
-		t.Fatal("Execute() with encrypt error expected error, got nil")
-	}
-
-	if !strings.Contains(err.Error(), "failed to encrypt key") {
-		t.Errorf("Execute() error = %q, want to contain 'failed to encrypt key'", err.Error())
-	}
+	assert.NotNil(t, err, "Execute() with encrypt error expected error, got nil")
+	assert.Contains(t, "failed to encrypt key", err.Error(), fmt.Sprintf("Execute() error = %q, want to contain 'failed to encrypt key'", err.Error()))
 }
 
 func TestRotatePassphraseUseCase_Execute_SaveError(t *testing.T) {
 	vault, _ := model.NewVault("test", "fingerprint", "salt")
-	vaultRepo := &mockVaultRepository{
+	vaultRepo := &test.MockVaultRepository{
 		LoadFunc: func(ctx context.Context, env string) (*model.Vault, error) {
 			return vault, nil
 		},
@@ -326,7 +279,7 @@ func TestRotatePassphraseUseCase_Execute_SaveError(t *testing.T) {
 		},
 	}
 
-	hashService := &mockHashService{
+	hashService := &test.MockHashService{
 		VerifyFunc: func(hashedPassphrase, passphrase string) error {
 			return nil
 		},
@@ -338,14 +291,9 @@ func TestRotatePassphraseUseCase_Execute_SaveError(t *testing.T) {
 		},
 	}
 
-	useCase := NewRotatePassphraseUseCase(vaultRepo, &mockEncryptionService{}, hashService)
+	useCase := NewRotatePassphraseUseCase(vaultRepo, &test.MockEncryptionService{}, hashService)
 
 	err := useCase.Execute(context.Background(), "test", "old", "new")
-	if err == nil {
-		t.Fatal("Execute() with save error expected error, got nil")
-	}
-
-	if err.Error() != "save error" {
-		t.Errorf("Execute() error = %q, want %q", err.Error(), "save error")
-	}
+	assert.NotNil(t, err, "Execute() with save error expected error, got nil")
+	assert.Equal(t, "save error", err.Error(), fmt.Sprintf("Execute() error = %q, want %q", err.Error(), "save error"))
 }

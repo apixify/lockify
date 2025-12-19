@@ -3,10 +3,12 @@ package app
 import (
 	"context"
 	"encoding/base64"
-	"slices"
+	"fmt"
 	"testing"
 
 	"github.com/ahmed-abdelgawad92/lockify/internal/domain/model"
+	"github.com/ahmed-abdelgawad92/lockify/test"
+	"github.com/ahmed-abdelgawad92/lockify/test/assert"
 )
 
 func TestListEntriesUseCase_Execute_Success(t *testing.T) {
@@ -17,7 +19,7 @@ func TestListEntriesUseCase_Execute_Success(t *testing.T) {
 	salt := "test-salt"
 	passphrase := "test-passphrase"
 
-	vaultService := &mockVaultService{
+	vaultService := &test.MockVaultService{
 		OpenFunc: func(ctx context.Context, env string) (*model.Vault, error) {
 			savedVault, _ := model.NewVault(env, "test-fingerprint", salt)
 			savedVault.SetPassphrase(passphrase)
@@ -30,19 +32,8 @@ func TestListEntriesUseCase_Execute_Success(t *testing.T) {
 	useCase := NewListEntriesUseCase(vaultService)
 
 	allKeys, err := useCase.Execute(context.Background(), env)
-	if err != nil {
-		t.Fatalf("Execute() returned unexpected error: %v", err)
-	}
-
-	if len(allKeys) != 2 {
-		t.Fatalf("length of keys error, want: 2, got: %v", len(allKeys))
-	}
-
-	if !slices.Contains(allKeys, key1) {
-		t.Errorf("keys should contain %v", key1)
-	}
-
-	if !slices.Contains(allKeys, key2) {
-		t.Errorf("keys should contain %v", key2)
-	}
+	assert.Nil(t, err, fmt.Sprintf("Execute() returned unexpected error: %v", err))
+	assert.Count(t, 2, allKeys, fmt.Sprintf("length of keys error, want: 2, got: %v", len(allKeys)))
+	assert.Contains(t, key1, allKeys, fmt.Sprintf("keys should contain %v", key1))
+	assert.Contains(t, key2, allKeys, fmt.Sprintf("keys should contain %v", key2))
 }

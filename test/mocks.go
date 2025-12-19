@@ -1,4 +1,4 @@
-package app
+package test
 
 import (
 	"context"
@@ -8,18 +8,27 @@ import (
 	"github.com/ahmed-abdelgawad92/lockify/internal/domain/model"
 )
 
-// ============================================================================
-// Shared Mocks for Use Case Tests
-// ============================================================================
+// MockPromptService mocks the PromptService for testing.
+type MockPromptService struct {
+	GetUserInputFunc func(isSecret bool) (key, value string)
+}
 
-// mockVaultService mocks the VaultService for testing.
-type mockVaultService struct {
+func (m *MockPromptService) GetUserInputForKeyAndValue(isSecret bool) (key, value string) {
+	if m.GetUserInputFunc != nil {
+		return m.GetUserInputFunc(isSecret)
+	}
+
+	return "test_key", "test_value"
+}
+
+// MockVaultService mocks the VaultService for testing.
+type MockVaultService struct {
 	OpenFunc   func(ctx context.Context, env string) (*model.Vault, error)
 	SaveFunc   func(ctx context.Context, vault *model.Vault) error
 	CreateFunc func(ctx context.Context, env string) (*model.Vault, error)
 }
 
-func (m *mockVaultService) Open(ctx context.Context, env string) (*model.Vault, error) {
+func (m *MockVaultService) Open(ctx context.Context, env string) (*model.Vault, error) {
 	if m.OpenFunc != nil {
 		return m.OpenFunc(ctx, env)
 	}
@@ -28,14 +37,14 @@ func (m *mockVaultService) Open(ctx context.Context, env string) (*model.Vault, 
 	return vault, nil
 }
 
-func (m *mockVaultService) Save(ctx context.Context, vault *model.Vault) error {
+func (m *MockVaultService) Save(ctx context.Context, vault *model.Vault) error {
 	if m.SaveFunc != nil {
 		return m.SaveFunc(ctx, vault)
 	}
 	return nil
 }
 
-func (m *mockVaultService) Create(ctx context.Context, env string) (*model.Vault, error) {
+func (m *MockVaultService) Create(ctx context.Context, env string) (*model.Vault, error) {
 	if m.CreateFunc != nil {
 		return m.CreateFunc(ctx, env)
 	}
@@ -43,13 +52,13 @@ func (m *mockVaultService) Create(ctx context.Context, env string) (*model.Vault
 	return vault, nil
 }
 
-// mockEncryptionService mocks the EncryptionService for testing.
-type mockEncryptionService struct {
+// MockEncryptionService mocks the EncryptionService for testing.
+type MockEncryptionService struct {
 	EncryptFunc func(plaintext []byte, encodedSalt, passphrase string) (string, error)
 	DecryptFunc func(ciphertext, encodedSalt, passphrase string) ([]byte, error)
 }
 
-func (m *mockEncryptionService) Encrypt(plaintext []byte, encodedSalt, passphrase string) (string, error) {
+func (m *MockEncryptionService) Encrypt(plaintext []byte, encodedSalt, passphrase string) (string, error) {
 	if m.EncryptFunc != nil {
 		return m.EncryptFunc(plaintext, encodedSalt, passphrase)
 	}
@@ -57,7 +66,7 @@ func (m *mockEncryptionService) Encrypt(plaintext []byte, encodedSalt, passphras
 	return "encrypted-value", nil
 }
 
-func (m *mockEncryptionService) Decrypt(ciphertext, encodedSalt, passphrase string) ([]byte, error) {
+func (m *MockEncryptionService) Decrypt(ciphertext, encodedSalt, passphrase string) ([]byte, error) {
 	if m.DecryptFunc != nil {
 		return m.DecryptFunc(ciphertext, encodedSalt, passphrase)
 	}
@@ -65,7 +74,8 @@ func (m *mockEncryptionService) Decrypt(ciphertext, encodedSalt, passphrase stri
 	return []byte("decrypted-value"), nil
 }
 
-type mockLogger struct {
+// MockLogger mocks the MockLogger for testing.
+type MockLogger struct {
 	InfoLogs     []string
 	ErrorLogs    []string
 	SuccessLogs  []string
@@ -80,7 +90,7 @@ type mockLogger struct {
 	OutputFunc   func(format string, args ...interface{})
 }
 
-func (l *mockLogger) Info(format string, args ...interface{}) {
+func (l *MockLogger) Info(format string, args ...interface{}) {
 	l.InfoLogs = append(l.InfoLogs, fmt.Sprintf(format, args...))
 	if l.InfoFunc == nil {
 		return
@@ -89,7 +99,7 @@ func (l *mockLogger) Info(format string, args ...interface{}) {
 	l.InfoFunc(format, args...)
 }
 
-func (l *mockLogger) Error(format string, args ...interface{}) {
+func (l *MockLogger) Error(format string, args ...interface{}) {
 	l.ErrorLogs = append(l.ErrorLogs, fmt.Sprintf(format, args...))
 	if l.ErrorFunc == nil {
 		return
@@ -98,7 +108,7 @@ func (l *mockLogger) Error(format string, args ...interface{}) {
 	l.ErrorFunc(format, args...)
 }
 
-func (l *mockLogger) Warning(format string, args ...interface{}) {
+func (l *MockLogger) Warning(format string, args ...interface{}) {
 	l.WarningLogs = append(l.WarningLogs, fmt.Sprintf(format, args...))
 	if l.WarningFunc == nil {
 		return
@@ -107,7 +117,7 @@ func (l *mockLogger) Warning(format string, args ...interface{}) {
 	l.WarningFunc(format, args...)
 }
 
-func (l *mockLogger) Success(format string, args ...interface{}) {
+func (l *MockLogger) Success(format string, args ...interface{}) {
 	l.SuccessLogs = append(l.SuccessLogs, fmt.Sprintf(format, args...))
 	if l.SuccessFunc == nil {
 		return
@@ -116,7 +126,7 @@ func (l *mockLogger) Success(format string, args ...interface{}) {
 	l.SuccessFunc(format, args...)
 }
 
-func (l *mockLogger) Progress(format string, args ...interface{}) {
+func (l *MockLogger) Progress(format string, args ...interface{}) {
 	l.ProgressLogs = append(l.ProgressLogs, fmt.Sprintf(format, args...))
 	if l.ProgressFunc == nil {
 		return
@@ -125,7 +135,7 @@ func (l *mockLogger) Progress(format string, args ...interface{}) {
 	l.ProgressFunc(format, args...)
 }
 
-func (l *mockLogger) Output(format string, args ...interface{}) {
+func (l *MockLogger) Output(format string, args ...interface{}) {
 	l.OutputLogs = append(l.OutputLogs, fmt.Sprintf(format, args...))
 	if l.OutputFunc == nil {
 		return
@@ -134,42 +144,42 @@ func (l *mockLogger) Output(format string, args ...interface{}) {
 	l.OutputFunc(format, args...)
 }
 
-// mockImportService mocks the ImportService for testing.
-type mockImportService struct {
+// MockImportService mocks the ImportService for testing.
+type MockImportService struct {
 	FromJsonFunc   func(r io.Reader) (map[string]string, error)
 	FromDotEnvFunc func(r io.Reader) (map[string]string, error)
 }
 
-func (m *mockImportService) FromJson(r io.Reader) (map[string]string, error) {
+func (m *MockImportService) FromJson(r io.Reader) (map[string]string, error) {
 	if m.FromJsonFunc != nil {
 		return m.FromJsonFunc(r)
 	}
 	return make(map[string]string), nil
 }
 
-func (m *mockImportService) FromDotEnv(r io.Reader) (map[string]string, error) {
+func (m *MockImportService) FromDotEnv(r io.Reader) (map[string]string, error) {
 	if m.FromDotEnvFunc != nil {
 		return m.FromDotEnvFunc(r)
 	}
 	return make(map[string]string), nil
 }
 
-// mockVaultRepository mocks the VaultRepository for testing.
-type mockVaultRepository struct {
+// MockVaultRepository mocks the VaultRepository for testing.
+type MockVaultRepository struct {
 	CreateFunc func(ctx context.Context, vault *model.Vault) error
 	LoadFunc   func(ctx context.Context, env string) (*model.Vault, error)
 	SaveFunc   func(ctx context.Context, vault *model.Vault) error
 	ExistsFunc func(ctx context.Context, env string) (bool, error)
 }
 
-func (m *mockVaultRepository) Create(ctx context.Context, vault *model.Vault) error {
+func (m *MockVaultRepository) Create(ctx context.Context, vault *model.Vault) error {
 	if m.CreateFunc != nil {
 		return m.CreateFunc(ctx, vault)
 	}
 	return nil
 }
 
-func (m *mockVaultRepository) Load(ctx context.Context, env string) (*model.Vault, error) {
+func (m *MockVaultRepository) Load(ctx context.Context, env string) (*model.Vault, error) {
 	if m.LoadFunc != nil {
 		return m.LoadFunc(ctx, env)
 	}
@@ -177,78 +187,78 @@ func (m *mockVaultRepository) Load(ctx context.Context, env string) (*model.Vaul
 	return vault, nil
 }
 
-func (m *mockVaultRepository) Save(ctx context.Context, vault *model.Vault) error {
+func (m *MockVaultRepository) Save(ctx context.Context, vault *model.Vault) error {
 	if m.SaveFunc != nil {
 		return m.SaveFunc(ctx, vault)
 	}
 	return nil
 }
 
-func (m *mockVaultRepository) Exists(ctx context.Context, env string) (bool, error) {
+func (m *MockVaultRepository) Exists(ctx context.Context, env string) (bool, error) {
 	if m.ExistsFunc != nil {
 		return m.ExistsFunc(ctx, env)
 	}
 	return false, nil
 }
 
-// mockHashService mocks the HashService for testing.
-type mockHashService struct {
+// MockHashService mocks the HashService for testing.
+type MockHashService struct {
 	HashFunc         func(passphrase string) (string, error)
 	VerifyFunc       func(hashedPassphrase, passphrase string) error
 	GenerateSaltFunc func(size int) (string, error)
 }
 
-func (m *mockHashService) Hash(passphrase string) (string, error) {
+func (m *MockHashService) Hash(passphrase string) (string, error) {
 	if m.HashFunc != nil {
 		return m.HashFunc(passphrase)
 	}
 	return "test-fingerprint", nil
 }
 
-func (m *mockHashService) Verify(hashedPassphrase, passphrase string) error {
+func (m *MockHashService) Verify(hashedPassphrase, passphrase string) error {
 	if m.VerifyFunc != nil {
 		return m.VerifyFunc(hashedPassphrase, passphrase)
 	}
 	return nil
 }
 
-func (m *mockHashService) GenerateSalt(size int) (string, error) {
+func (m *MockHashService) GenerateSalt(size int) (string, error) {
 	if m.GenerateSaltFunc != nil {
 		return m.GenerateSaltFunc(size)
 	}
 	return "test-salt", nil
 }
 
-// mockPassphraseService mocks the PassphraseService for testing.
-type mockPassphraseService struct {
+// MockPassphraseService mocks the PassphraseService for testing.
+type MockPassphraseService struct {
 	GetFunc      func(ctx context.Context, env string) (string, error)
 	ClearFunc    func(ctx context.Context, env string) error
 	ClearAllFunc func(ctx context.Context) error
 	ValidateFunc func(ctx context.Context, vault *model.Vault, passphrase string) error
 }
 
-func (m *mockPassphraseService) Get(ctx context.Context, env string) (string, error) {
+func (m *MockPassphraseService) Get(ctx context.Context, env string) (string, error) {
 	if m.GetFunc != nil {
 		return m.GetFunc(ctx, env)
 	}
 	return "test-passphrase", nil
 }
 
-func (m *mockPassphraseService) Clear(ctx context.Context, env string) error {
+func (m *MockPassphraseService) Clear(ctx context.Context, env string) error {
 	if m.ClearFunc != nil {
 		return m.ClearFunc(ctx, env)
 	}
 	return nil
 }
 
-func (m *mockPassphraseService) ClearAll(ctx context.Context) error {
+func (m *MockPassphraseService) ClearAll(ctx context.Context) error {
 	if m.ClearAllFunc != nil {
 		return m.ClearAllFunc(ctx)
 	}
 	return nil
 }
 
-func (m *mockPassphraseService) Validate(ctx context.Context, vault *model.Vault, passphrase string) error {
+func (m *MockPassphraseService) Validate(ctx context.Context, vault *model.Vault, passphrase string) error {
 	if m.ValidateFunc != nil {
 		return m.ValidateFunc(ctx, vault, passphrase)
 	}

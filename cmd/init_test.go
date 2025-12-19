@@ -7,9 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ahmed-abdelgawad92/lockify/internal/app"
-	"github.com/ahmed-abdelgawad92/lockify/internal/domain"
 	"github.com/ahmed-abdelgawad92/lockify/internal/domain/model"
+	"github.com/ahmed-abdelgawad92/lockify/test"
 )
 
 type mockInitUseCase struct {
@@ -25,32 +24,9 @@ func (m *mockInitUseCase) Execute(ctx context.Context, env string) (*model.Vault
 	return vault, nil
 }
 
-type mockCmdLogger struct {
-	progressMsgs []string
-	successMsgs  []string
-}
-
-func (l *mockCmdLogger) Progress(format string, args ...interface{}) {
-	l.progressMsgs = append(l.progressMsgs, fmt.Sprintf(format, args...))
-}
-
-func (l *mockCmdLogger) Success(format string, args ...interface{}) {
-	l.successMsgs = append(l.successMsgs, fmt.Sprintf(format, args...))
-}
-
-func (l *mockCmdLogger) Info(format string, args ...interface{})    {}
-func (l *mockCmdLogger) Error(format string, args ...interface{})   {}
-func (l *mockCmdLogger) Warning(format string, args ...interface{}) {}
-func (l *mockCmdLogger) Output(format string, args ...interface{})  {}
-
-var (
-	_ domain.Logger = (*mockCmdLogger)(nil)
-	_ app.InitUc    = (*mockInitUseCase)(nil)
-)
-
 func TestInitCommand_Success(t *testing.T) {
 	mockUseCase := &mockInitUseCase{}
-	mockLogger := &mockCmdLogger{}
+	mockLogger := &test.MockLogger{}
 
 	cmd := NewInitCommand(mockUseCase, mockLogger)
 	if err := cmd.Flags().Set("env", "test"); err != nil {
@@ -65,10 +41,10 @@ func TestInitCommand_Success(t *testing.T) {
 		t.Fatalf("RunE returned unexpected error: %v", err)
 	}
 
-	if len(mockLogger.progressMsgs) == 0 {
+	if len(mockLogger.ProgressLogs) == 0 {
 		t.Error("expected Progress to be logged")
 	}
-	if len(mockLogger.successMsgs) == 0 {
+	if len(mockLogger.SuccessLogs) == 0 {
 		t.Error("expected Success to be logged")
 	}
 }
@@ -78,7 +54,7 @@ func TestInitCommand_Failed(t *testing.T) {
 	mockUseCase := &mockInitUseCase{executeFunc: func(ctx context.Context, env string) (*model.Vault, error) {
 		return nil, fmt.Errorf("%s", errMsg)
 	}}
-	mockLogger := &mockCmdLogger{}
+	mockLogger := &test.MockLogger{}
 
 	cmd := NewInitCommand(mockUseCase, mockLogger)
 	if err := cmd.Flags().Set("env", "test"); err != nil {
@@ -97,17 +73,17 @@ func TestInitCommand_Failed(t *testing.T) {
 	if !strings.Contains(err.Error(), errMsg) {
 		t.Errorf("wants %q, got %q", errMsg, err)
 	}
-	if len(mockLogger.progressMsgs) == 0 {
+	if len(mockLogger.ProgressLogs) == 0 {
 		t.Error("expected Progress to be logged")
 	}
-	if len(mockLogger.successMsgs) != 0 {
+	if len(mockLogger.SuccessLogs) != 0 {
 		t.Error("is not expecting Success to be logged")
 	}
 }
 
 func TestInitCommand_Error_Required_Env(t *testing.T) {
 	mockUseCase := &mockInitUseCase{}
-	mockLogger := &mockCmdLogger{}
+	mockLogger := &test.MockLogger{}
 
 	cmd := NewInitCommand(mockUseCase, mockLogger)
 
@@ -124,17 +100,17 @@ func TestInitCommand_Error_Required_Env(t *testing.T) {
 	if !strings.Contains(err.Error(), wants) {
 		t.Errorf("wants error to contain %q, got %q", wants, err)
 	}
-	if len(mockLogger.progressMsgs) != 0 {
+	if len(mockLogger.ProgressLogs) != 0 {
 		t.Error("is not expecting Progress to be logged")
 	}
-	if len(mockLogger.successMsgs) != 0 {
+	if len(mockLogger.SuccessLogs) != 0 {
 		t.Error("is not expecting Success to be logged")
 	}
 }
 
 func TestInitCommand_Error_Empty_Env(t *testing.T) {
 	mockUseCase := &mockInitUseCase{}
-	mockLogger := &mockCmdLogger{}
+	mockLogger := &test.MockLogger{}
 
 	cmd := NewInitCommand(mockUseCase, mockLogger)
 	if err := cmd.Flags().Set("env", ""); err != nil {
@@ -154,10 +130,10 @@ func TestInitCommand_Error_Empty_Env(t *testing.T) {
 	if !strings.Contains(err.Error(), wants) {
 		t.Errorf("wants error to contain %q, got %q", wants, err)
 	}
-	if len(mockLogger.progressMsgs) != 0 {
+	if len(mockLogger.ProgressLogs) != 0 {
 		t.Error("is not expecting Progress to be logged")
 	}
-	if len(mockLogger.successMsgs) != 0 {
+	if len(mockLogger.SuccessLogs) != 0 {
 		t.Error("is not expecting Success to be logged")
 	}
 }

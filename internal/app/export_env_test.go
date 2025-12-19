@@ -7,13 +7,15 @@ import (
 	"testing"
 
 	"github.com/ahmed-abdelgawad92/lockify/internal/domain/model"
+	"github.com/ahmed-abdelgawad92/lockify/test"
+	"github.com/ahmed-abdelgawad92/lockify/test/assert"
 )
 
 func TestExportEnvUseCase_Execute_Json(t *testing.T) {
 	env := "test"
 	key := "test-key"
 	value := "test-value"
-	vaultService := &mockVaultService{
+	vaultService := &test.MockVaultService{
 		OpenFunc: func(ctx context.Context, env string) (*model.Vault, error) {
 			vault, _ := model.NewVault(env, "test-fingerprint", "salt")
 			vault.SetPassphrase("passphrase")
@@ -21,8 +23,8 @@ func TestExportEnvUseCase_Execute_Json(t *testing.T) {
 			return vault, nil
 		},
 	}
-	loggerService := &mockLogger{}
-	encryptionService := &mockEncryptionService{
+	loggerService := &test.MockLogger{}
+	encryptionService := &test.MockEncryptionService{
 		DecryptFunc: func(ciphertext, encodedSalt, passphrase string) ([]byte, error) {
 			return []byte(value), nil
 		},
@@ -34,17 +36,14 @@ func TestExportEnvUseCase_Execute_Json(t *testing.T) {
 
 	var got map[string]string
 	json.Unmarshal([]byte(loggerService.OutputLogs[0]), &got)
-
-	if got[key] != value {
-		t.Errorf("want: %q, got: %q", value, got[key])
-	}
+	assert.Equal(t, got[key], value, fmt.Sprintf("want: %q, got: %q", value, got[key]))
 }
 
 func TestExportEnvUseCase_Execute_Dotenv(t *testing.T) {
 	env := "test"
 	key := "test-key"
 	value := "test-value"
-	vaultService := &mockVaultService{
+	vaultService := &test.MockVaultService{
 		OpenFunc: func(ctx context.Context, env string) (*model.Vault, error) {
 			vault, _ := model.NewVault(env, "test-fingerprint", "salt")
 			vault.SetPassphrase("passphrase")
@@ -52,8 +51,8 @@ func TestExportEnvUseCase_Execute_Dotenv(t *testing.T) {
 			return vault, nil
 		},
 	}
-	loggerService := &mockLogger{}
-	encryptionService := &mockEncryptionService{
+	loggerService := &test.MockLogger{}
+	encryptionService := &test.MockEncryptionService{
 		DecryptFunc: func(ciphertext, encodedSalt, passphrase string) ([]byte, error) {
 			return []byte(value), nil
 		},
@@ -65,8 +64,5 @@ func TestExportEnvUseCase_Execute_Dotenv(t *testing.T) {
 
 	want := fmt.Sprintf("%s=%s\n", key, value)
 	got := loggerService.OutputLogs[0]
-
-	if got != want {
-		t.Errorf("want: %q, got: %q", want, got)
-	}
+	assert.Equal(t, want, got)
 }

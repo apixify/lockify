@@ -3,10 +3,12 @@ package app
 import (
 	"context"
 	"errors"
-	"strings"
+	"fmt"
 	"testing"
 
 	"github.com/ahmed-abdelgawad92/lockify/internal/domain/model"
+	"github.com/ahmed-abdelgawad92/lockify/test"
+	"github.com/ahmed-abdelgawad92/lockify/test/assert"
 )
 
 func TestAddEntryUseCase_Execute_Success(t *testing.T) {
@@ -22,7 +24,7 @@ func TestAddEntryUseCase_Execute_Success(t *testing.T) {
 
 	var savedVault *model.Vault
 
-	vaultService := &mockVaultService{
+	vaultService := &test.MockVaultService{
 		OpenFunc: func(ctx context.Context, env string) (*model.Vault, error) {
 			vault, _ := model.NewVault(env, "test-fingerprint", salt)
 			vault.SetPassphrase(passphrase)
@@ -34,7 +36,7 @@ func TestAddEntryUseCase_Execute_Success(t *testing.T) {
 		},
 	}
 
-	encryptionService := &mockEncryptionService{
+	encryptionService := &test.MockEncryptionService{
 		EncryptFunc: func(plaintext []byte, encodedSalt, pwd string) (string, error) {
 			if string(plaintext) != value {
 				t.Errorf("Encrypt() called with plaintext %q, want %q", string(plaintext), value)
@@ -57,75 +59,55 @@ func TestAddEntryUseCase_Execute_Success(t *testing.T) {
 		Value: value,
 	})
 
-	if err != nil {
-		t.Fatalf("Execute() returned unexpected error: %v", err)
-	}
-
-	if savedVault == nil {
-		t.Fatal("Execute() should call Save() with the vault, but Save() was not called")
-	}
+	assert.Nil(t, err, fmt.Sprintf("Execute() returned unexpected error: %v", err))
+	assert.NotNil(t, savedVault, "Execute() should call Save() with the vault, but Save() was not called")
 
 	entry, err := savedVault.GetEntry(key)
-	if err != nil {
-		t.Fatalf("Execute() should add entry with key %q, but GetEntry() failed: %v", key, err)
-	}
-
-	if entry.Value != encryptedValue {
-		t.Errorf("Execute() added entry with value %q, want %q", entry.Value, encryptedValue)
-	}
+	assert.Nil(t, err, fmt.Sprintf("Execute() should add entry with key %q, but GetEntry() failed: %v", key, err))
+	assert.Equal(t, entry.Value, encryptedValue, fmt.Sprintf("Execute() added entry with value %q, want %q", entry.Value, encryptedValue))
 }
 
 func TestAddEntryUseCase_Execute_VaultOpenError(t *testing.T) {
-	vaultService := &mockVaultService{
+	vaultService := &test.MockVaultService{
 		OpenFunc: func(ctx context.Context, env string) (*model.Vault, error) {
 			return nil, errors.New("open vault error")
 		},
 	}
 
-	useCase := NewAddEntryUseCase(vaultService, &mockEncryptionService{})
+	useCase := NewAddEntryUseCase(vaultService, &test.MockEncryptionService{})
 	err := useCase.Execute(context.Background(), AddEntryDTO{
 		Env:   "test",
 		Key:   "test-key",
 		Value: "test-value",
 	})
 
-	if err == nil {
-		t.Fatalf("Execute() should return vault open error, got nil")
-	}
-
-	if !strings.Contains(err.Error(), "failed to open vault for environment") {
-		t.Errorf("Execute() error = %q, want to contain 'failed to open vault for environment'", err.Error())
-	}
+	assert.NotNil(t, err, "Execute() should return vault open error, got nil")
+	assert.Contains(t, "failed to open vault for environment", err.Error())
 }
 
 func TestAddEntryUseCase_Execute_EncryptionError(t *testing.T) {
-	encryptionService := &mockEncryptionService{
+	encryptionService := &test.MockEncryptionService{
 		EncryptFunc: func(plaintext []byte, encodedSalt, passphrase string) (string, error) {
 			return "", errors.New("encryption failed")
 		},
 	}
-	useCase := NewAddEntryUseCase(&mockVaultService{}, encryptionService)
+	useCase := NewAddEntryUseCase(&test.MockVaultService{}, encryptionService)
 	err := useCase.Execute(context.Background(), AddEntryDTO{
 		Env:   "test",
 		Key:   "test-key",
 		Value: "test-value",
 	})
 
-	if err == nil {
-		t.Fatalf("Execute() should return encryption error, got nil")
-	}
-
-	if !strings.Contains(err.Error(), "failed to encrypt value") {
-		t.Errorf("Execute() error = %q, want to contain 'failed to encrypt value'", err.Error())
-	}
+	assert.NotNil(t, err, "Execute() should return encryption error, got nil")
+	assert.Contains(t, "failed to encrypt value", err.Error(), fmt.Sprintf("Execute() error = %q, want to contain 'failed to encrypt value'", err.Error()))
 }
 
 func TestAddEntryUseCase_Execute_SaveError(t *testing.T) {
-	useCase := NewAddEntryUseCase(&mockVaultService{
+	useCase := NewAddEntryUseCase(&test.MockVaultService{
 		SaveFunc: func(ctx context.Context, vault *model.Vault) error {
 			return errors.New("save failed")
 		},
-	}, &mockEncryptionService{})
+	}, &test.MockEncryptionService{})
 
 	err := useCase.Execute(context.Background(), AddEntryDTO{
 		Env:   "test",
@@ -133,11 +115,6 @@ func TestAddEntryUseCase_Execute_SaveError(t *testing.T) {
 		Value: "test-value",
 	})
 
-	if err == nil {
-		t.Fatalf("Execute() should return save error, got nil")
-	}
-
-	if !strings.Contains(err.Error(), "save failed") {
-		t.Errorf("Execute() error = %q, want to contain 'save failed'", err.Error())
-	}
+	assert.NotNil(t, err, "Execute() should return save error, got nil")
+	assert.Contains(t, "save failed", err.Error(), fmt.Sprintf("Execute() error = %q, want to contain 'save failed'", err.Error()))
 }

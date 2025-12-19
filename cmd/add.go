@@ -1,20 +1,21 @@
 package cmd
 
 import (
-	"github.com/AlecAivazis/survey/v2"
 	"github.com/ahmed-abdelgawad92/lockify/internal/app"
 	"github.com/ahmed-abdelgawad92/lockify/internal/di"
 	"github.com/ahmed-abdelgawad92/lockify/internal/domain"
+	"github.com/ahmed-abdelgawad92/lockify/internal/domain/service"
 	"github.com/spf13/cobra"
 )
 
 type AddCommand struct {
 	useCase app.AddEntryUc
+	prompt  service.PromptService
 	logger  domain.Logger
 }
 
-func NewAddCommand(addUc app.AddEntryUc, logger domain.Logger) *cobra.Command {
-	cmd := &AddCommand{useCase: addUc, logger: logger}
+func NewAddCommand(useCase app.AddEntryUc, prompt service.PromptService, logger domain.Logger) *cobra.Command {
+	cmd := &AddCommand{useCase, prompt, logger}
 
 	// lockify add --env [env]
 	cobraCmd := &cobra.Command{
@@ -44,7 +45,7 @@ func (c *AddCommand) runE(cmd *cobra.Command, args []string) error {
 	}
 
 	isSecret, _ := cmd.Flags().GetBool("secret")
-	key, value := getUserInputForKeyAndValue(isSecret)
+	key, value := c.prompt.GetUserInputForKeyAndValue(isSecret)
 
 	ctx := getContext()
 	dto := app.AddEntryDTO{Env: env, Key: key, Value: value}
@@ -61,21 +62,6 @@ func (c *AddCommand) runE(cmd *cobra.Command, args []string) error {
 }
 
 func init() {
-	addCmd := NewAddCommand(di.BuildAddEntry(), di.GetLogger())
+	addCmd := NewAddCommand(di.BuildAddEntry(), di.BuildPromptService(), di.GetLogger())
 	rootCmd.AddCommand(addCmd)
-}
-
-func getUserInputForKeyAndValue(isSecret bool) (key, value string) {
-	prompt := &survey.Input{Message: "Enter key:"}
-	survey.AskOne(prompt, &key)
-
-	if isSecret {
-		prompt := &survey.Password{Message: "Enter secret:"}
-		survey.AskOne(prompt, &value)
-	} else {
-		prompt = &survey.Input{Message: "Enter value:"}
-		survey.AskOne(prompt, &value)
-	}
-
-	return key, value
 }
