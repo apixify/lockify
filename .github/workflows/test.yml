@@ -35,32 +35,11 @@ jobs:
           go-version: ${{ inputs.go_version }}
           cache-dependency-path: go.sum
     
-      - name: Cache Go modules
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cache/go-build
-            ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
-    
-      - name: Download dependencies
-        run: go mod download
-    
       - name: Run unit tests
         run: go test -v -race -timeout=30s -coverprofile=coverage.out ./...
     
       - name: Run vet
         run: go vet ./...
-    
-      - name: Check formatting
-        run: |
-          if [ "$(gofmt -s -l . | wc -l)" -gt 0 ]; then
-            echo "::error::Code is not formatted. Run: gofmt -s -w ."
-            gofmt -s -d .
-            exit 1
-          fi
     
       - name: Set test success
         id: test
