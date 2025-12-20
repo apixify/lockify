@@ -1,7 +1,25 @@
 # Lockify
 
-> 🔐 Lockify — a secure, developer-friendly CLI for managing encrypted environment variables across environments (dev, staging, prod).  
-> Safe to store in Git. CI/CD friendly. Built in Go.
+🔐 Lockify — a secure, developer-friendly CLI for managing encrypted environment variables across environments (dev, staging, prod).  
+Safe to store in Git. CI/CD friendly. Built in Go.
+
+---
+
+## Table of Contents
+
+- [Why Lockify?](#why-lockify)
+- [Key Features](#key-features)
+- [Install](#install)
+  - [Using Homebrew](#using-homebrew)
+  - [Download Pre-built Binaries](#download-pre-built-binaries)
+  - [Using Go](#using-go)
+  - [From Source](#from-source)
+- [Quick Start](#quick-start)
+- [GitHub Actions Example](#github-actions-example)
+- [Security Summary](#security-summary)
+- [Contributing](#contributing)
+- [License](#license)
+- [Security Contact](#security-contact)
 
 ---
 
@@ -30,10 +48,56 @@ It focuses on an offline-first, CLI-first experience with strong cryptography an
 
 ## Install
 
+### Using Homebrew
+
+```sh
+brew tap ahmed-abdelgawad92/lockify
+brew install lockify
+```
+
+### Download Pre-built Binaries
+
+Visit the [GitHub Releases](https://github.com/ahmed-abdelgawad92/lockify/releases/latest) page to download pre-built binaries for your platform.
+
+**Linux:**
+#### Download the appropriate .tar.gz file for your architecture (amd64 or arm64)
+```sh
+# Then extract and install:
+tar -xzf lockify_1.2.3_linux_amd64.tar.gz
+sudo mv lockify /usr/local/bin/
+```
+
+**macOS:**
+#### Download the appropriate .tar.gz file:
+- Intel: lockify_*_darwin_amd64.tar.gz
+- Apple Silicon: lockify_*_darwin_arm64.tar.gz
+```sh
+# extract and install:
+tar -xzf lockify_*_darwin_*.tar.gz
+sudo mv lockify /usr/local/bin/
+```
+
+**Windows:**
+#### Download the appropriate .zip file (amd64 or arm64)
+```powershell
+# Extract and add to PATH
+Expand-Archive -Path lockify_*_windows_*.zip -DestinationPath .
+# Move lockify.exe to a directory in your PATH
+```
+
 ### Using Go
 
 ```sh
 go install github.com/ahmed-abdelgawad92/lockify@latest
+```
+
+**Note:** After installing via Go, make sure `$GOPATH/bin` (or `$HOME/go/bin` if GOPATH is not set) is in your PATH:
+
+```sh
+# Add to ~/.zshrc or ~/.bashrc
+export PATH="$PATH:$(go env GOPATH)/bin"
+# Or if GOPATH is not set:
+export PATH="$PATH:$HOME/go/bin"
 ```
 
 ### From Source
@@ -42,6 +106,11 @@ go install github.com/ahmed-abdelgawad92/lockify@latest
 git clone https://github.com/ahmed-abdelgawad92/lockify.git
 cd lockify
 go build -o lockify .
+```
+
+After building, you may want to move the binary to a directory in your PATH:
+```sh
+sudo mv lockify /usr/local/bin/  # macOS/Linux
 ```
 
 ---
@@ -54,22 +123,53 @@ go build -o lockify .
 lockify init --env prod
 ```
 
-### 2. Add a Secret
+### 2. Add a Key-Value entry
+
+```sh
+lockify add --env prod
+```
+
+### 3. Add a Secret entry
 
 ```sh
 lockify add --env prod --secret
 ```
 
-### 3. Export to `.env` (CI-friendly)
+### 4. Export to `.env` (CI-friendly)
 
 ```sh
 lockify export --env prod --format dotenv > .env
 ```
 
-### 4. Get a Value
+### 5. Import .env to a vault
+
+```sh
+lockify import .env --env prod --format dotenv
+lockify import env.json --env staging --format json
+```
+
+### 6. Get a Value
 
 ```sh
 lockify get --env prod --key DATABASE_URL
+```
+
+### 7. List all keys
+
+```sh
+lockify list --env prod
+```
+
+### 8. Delete an entry
+
+```sh
+lockify delete --env prod --key DATABASE_URL
+```
+
+### 9. Clear cached passphrase
+
+```sh
+lockify cache clear
 ```
 
 ---
@@ -100,21 +200,6 @@ steps:
 
 ```sh
 lockify rotate-key --env <env>
-```
-
----
-
-## Project Layout (High Level)
-
-```
-cmd/          # CLI commands (Cobra)
-internal/
-  domain/     # Entities and interfaces (pure)
-  app/        # Use cases
-  infra/      # Crypto, filesystem, keyring implementations
-  ui/         # Prompts and output formatting
-  di/         # Command-scoped dependency injection
-docs/         # Documentation
 ```
 
 ---
