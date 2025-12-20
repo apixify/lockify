@@ -1,0 +1,56 @@
+# Usage: See .github/workflows/release.yml
+name: Build Job
+
+on:
+  workflow_call:
+    inputs:
+      go_version:
+        required: true
+        type: string
+        description: 'Go version to use'
+    outputs:
+      build_success:
+        description: 'Whether build succeeded'
+        value: ${{ jobs.build.outputs.success }}
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Validate Compilation
+    runs-on: ubuntu-latest
+    outputs:
+      success: ${{ steps.build.outputs.success }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+    
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ inputs.go_version }}
+          cache-dependency-path: go.sum
+    
+      - name: Cache Go modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+    
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Validate compilation
+        id: build
+        run: |
+          go build -v ./...
+          echo "success=true" >> $GITHUB_OUTPUT
+

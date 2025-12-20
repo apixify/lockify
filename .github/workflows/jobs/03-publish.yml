@@ -1,0 +1,54 @@
+# Usage: See .github/workflows/release.yml
+name: Publish Job
+
+on:
+  workflow_call:
+    inputs:
+      go_version:
+        required: true
+        type: string
+        description: 'Go version to use'
+    outputs:
+      release_created:
+        description: 'Whether release was created'
+        value: ${{ jobs.publish.outputs.success }}
+
+permissions:
+  contents: write  # Required for creating releases
+
+jobs:
+  publish:
+    name: Create Release
+    runs-on: ubuntu-latest
+    outputs:
+      success: ${{ steps.publish.outputs.success }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+    
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ inputs.go_version }}
+    
+      - name: Run GoReleaser
+        id: publish
+        uses: goreleaser/goreleaser-action@v5
+        with:
+          version: 'v2.13.1'
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    
+      - name: Set publish success
+        if: success()
+        run: echo "success=true" >> $GITHUB_OUTPUT
+    
+      - name: Verify release
+        run: |
+          TAG_NAME="${GITHUB_REF#refs/tags/}"
+          echo "Release created for tag: $TAG_NAME"
+

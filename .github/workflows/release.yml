@@ -9,43 +9,46 @@ permissions:
   contents: write
 
 jobs:
-  release:
-    name: Build and Release
-    runs-on: ubuntu-latest
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+  # ============================================
+  # Stage 1: Build
+  # ============================================
+  build:
+    name: Build
+    uses: ./.github/workflows/jobs/01-build.yml
+    with:
+      go_version: '1.24'
+    secrets: inherit
 
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: '1.24'
-          cache-dependency-path: go.sum
+  # ============================================
+  # Stage 2: Test
+  # ============================================
+  test:
+    name: Test
+    needs: build
+    uses: ./.github/workflows/jobs/02-test.yml
+    with:
+      go_version: '1.24'
+    secrets: inherit
 
-      - name: Cache Go modules
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cache/go-build
-            ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
+  # ============================================
+  # Stage 3: Publish
+  # ============================================
+  publish:
+    name: Publish
+    needs: [build, test]
+    uses: ./.github/workflows/jobs/03-publish.yml
+    with:
+      go_version: '1.24'
+    secrets: inherit
 
-      - name: Download dependencies
-        run: go mod download
-
-      - name: Run tests
-        run: go test -v -race -timeout=30s ./...
-
-      - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@v5
-        with:
-          version: 'v2.13.1'
-          args: release --clean
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  # ============================================
+  # Stage 4: Update Homebrew
+  # ============================================
+  release-brew:
+    name: Update Homebrew
+    needs: publish
+    uses: ./.github/workflows/jobs/04-release-brew.yml
+    with:
+      tag_name: ${{ github.ref_name }}
+    secrets: inherit
 
