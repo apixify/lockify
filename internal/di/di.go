@@ -8,10 +8,10 @@ import (
 	"github.com/ahmed-abdelgawad92/lockify/internal/domain/service"
 	"github.com/ahmed-abdelgawad92/lockify/internal/domain/storage"
 	"github.com/ahmed-abdelgawad92/lockify/internal/infrastructure/cache"
-	"github.com/ahmed-abdelgawad92/lockify/internal/infrastructure/crypto"
 	"github.com/ahmed-abdelgawad92/lockify/internal/infrastructure/fs"
 	"github.com/ahmed-abdelgawad92/lockify/internal/infrastructure/logger"
 	"github.com/ahmed-abdelgawad92/lockify/internal/infrastructure/prompt"
+	"github.com/ahmed-abdelgawad92/lockify/internal/infrastructure/security"
 )
 
 var (
@@ -21,7 +21,7 @@ var (
 )
 
 func getHashService() service.HashService {
-	return crypto.NewBcryptHashService()
+	return security.NewBcryptHashService()
 }
 
 func getCacheService() service.Cache {
@@ -29,11 +29,11 @@ func getCacheService() service.Cache {
 }
 
 func getPassphraseService() service.PassphraseService {
-	return crypto.NewPassphraseService(getCacheService(), getHashService(), vaultConfig.PassphraseEnv)
+	return security.NewPassphraseService(getCacheService(), getHashService(), vaultConfig.PassphraseEnv)
 }
 
 func getEncryptionService() service.EncryptionService {
-	return crypto.NewAESEncryptionService(encryptionConfig)
+	return security.NewAESEncryptionService(encryptionConfig)
 }
 
 func getFileSystemStorage() storage.FileSystem {

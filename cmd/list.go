@@ -13,7 +13,6 @@ type ListCommand struct {
 }
 
 func NewListCommand(useCase app.ListEntriesUc, logger domain.Logger) *cobra.Command {
-
 	cmd := &ListCommand{useCase, logger}
 	// lockify list [env]
 	cobraCmd := &cobra.Command{
