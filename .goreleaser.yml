@@ -1,3 +1,5 @@
+version: 2
+
 project_name: lockify
 
 # Build configuration
@@ -51,19 +53,13 @@ changelog:
 #   brew tap ahmed-abdelgawad92/lockify
 #   brew install --cask lockify
 # Or directly: brew install --cask ahmed-abdelgawad92/lockify
-homebrew:
-  name: lockify
-  tap:
-    owner: ahmed-abdelgawad92
-    name: homebrew-lockify
-  homepage: "https://github.com/ahmed-abdelgawad92/lockify"
-  description: "Secure environment variable management"
-  license: "MIT"
-  # Use cask for pre-built binaries (appropriate for CLI tools)
-  type: cask
-  # Test command to verify installation
-  test: |
-    system "#{bin}/lockify --version"
+homebrew_casks:
+  - name: lockify
+    repository:
+      owner: ahmed-abdelgawad92
+      name: homebrew-lockify
+    homepage: "https://github.com/ahmed-abdelgawad92/lockify"
+    description: "Secure environment variable management"
 
 # Snapshot builds (for testing)
 # Note: version template above ensures .Version never includes "-next"
