@@ -40,3 +40,5 @@ Thumbs.db
 lockify
 # .lockify vaults
 .lockify/
+
+dist/

@@ -1,0 +1,95 @@
+project_name: lockify
+
+# Build configuration
+builds:
+  - main: ./main.go
+    binary: lockify
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+      - -X github.com/ahmed-abdelgawad92/lockify/cmd.Version={{ replace .Version "-next" "" }}
+    env:
+      - CGO_ENABLED=0
+
+# Archive configuration (creates tar.gz/zip files)
+archives:
+  - format: tar.gz
+    format_overrides:
+      - goos: windows
+        format: zip
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}"
+    files:
+      - README.md
+      - LICENSE
+
+# Checksums
+checksum:
+  name_template: 'checksums.txt'
+  algorithm: sha256
+
+# Changelog generation
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+      - '^chore:'
+      - Merge pull request
+      - Merge branch
+
+# Homebrew Cask (for pre-built binaries)
+# Tap repository: https://github.com/ahmed-abdelgawad92/homebrew-lockify
+# On release, goreleaser will create/update the Caskfile automatically
+# Users can install with:
+#   brew tap ahmed-abdelgawad92/lockify
+#   brew install --cask lockify
+# Or directly: brew install --cask ahmed-abdelgawad92/lockify
+homebrew:
+  name: lockify
+  tap:
+    owner: ahmed-abdelgawad92
+    name: homebrew-lockify
+  homepage: "https://github.com/ahmed-abdelgawad92/lockify"
+  description: "Secure environment variable management"
+  license: "MIT"
+  # Use cask for pre-built binaries (appropriate for CLI tools)
+  type: cask
+  # Test command to verify installation
+  test: |
+    system "#{bin}/lockify --version"
+
+# Snapshot builds (for testing)
+# Note: version template above ensures .Version never includes "-next"
+snapshot:
+  name_template: "{{ .Tag }}-next"
+
+# Release notes template
+release:
+  mode: replace
+  header: |
+    ## Lockify {{ .Tag }}
+    
+    {{ .Changelog }}
+    
+    ### Installation
+    
+    **Option 1: Direct Download (All Platforms)**
+    
+    Download the binary for your platform from the assets below:
+    - **Linux**: `lockify_linux_amd64.tar.gz` or `lockify_linux_arm64.tar.gz`
+    - **macOS**: `lockify_darwin_amd64.tar.gz` or `lockify_darwin_arm64.tar.gz`
+    - **Windows**: `lockify_windows_amd64.zip` or `lockify_windows_arm64.zip`
+    
+    Extract and add to your PATH.
+    
+    **Option 2: Package Managers (Optional)**
+    
+    - **macOS**: `brew install --cask ahmed-abdelgawad92/lockify/lockify`
+
