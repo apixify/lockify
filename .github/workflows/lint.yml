@@ -1,0 +1,48 @@
+# Reusable Workflow: Lint Job
+# Usage: See .github/workflows/release.yml
+
+name: Lint Job
+
+on:
+  workflow_call:
+    inputs:
+      go_version:
+        required: true
+        type: string
+        description: 'Go version to use'
+    outputs:
+      lint_success:
+        description: 'Whether linting passed'
+        value: ${{ jobs.lint.outputs.success }}
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Run Linter
+    runs-on: ubuntu-latest
+    outputs:
+      success: ${{ steps.lint.outputs.success }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+    
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ inputs.go_version }}
+          cache-dependency-path: go.sum
+    
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: latest
+          args: --timeout=5m
+    
+      - name: Set lint success
+        id: lint
+        if: success()
+        run: echo "success=true" >> $GITHUB_OUTPUT
+
