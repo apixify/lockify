@@ -18,8 +18,7 @@ const (
 )
 
 // ImportService implements ImportService for filesystem-based imports.
-type ImportService struct {
-}
+type ImportService struct{}
 
 // NewImportService creates a new ImportService instance.
 func NewImportService() service.ImportService {

@@ -11,8 +11,10 @@ import (
 	"github.com/ahmed-abdelgawad92/lockify/test/assert"
 )
 
-const newSalt = "new-salt"
-const newFingerprint = "new-fingerprint"
+const (
+	newSalt        = "new-salt"
+	newFingerprint = "new-fingerprint"
+)
 
 func TestRotatePassphraseUseCase_Execute_Success(t *testing.T) {
 	currentPassphrase := "old-passphrase"

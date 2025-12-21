@@ -15,7 +15,9 @@ type MockPromptService struct {
 }
 
 // GetUserInputForKeyAndValue mocks the GetUserInputForKeyAndValue method.
-func (m *MockPromptService) GetUserInputForKeyAndValue(isSecret bool) (key, value string, err error) {
+func (m *MockPromptService) GetUserInputForKeyAndValue(
+	isSecret bool,
+) (key, value string, err error) {
 	if m.GetUserInputFunc != nil {
 		return m.GetUserInputFunc(isSecret)
 	}
@@ -72,7 +74,10 @@ type MockEncryptionService struct {
 }
 
 // Encrypt mocks the Encrypt method.
-func (m *MockEncryptionService) Encrypt(plaintext []byte, encodedSalt, passphrase string) (string, error) {
+func (m *MockEncryptionService) Encrypt(
+	plaintext []byte,
+	encodedSalt, passphrase string,
+) (string, error) {
 	if m.EncryptFunc != nil {
 		return m.EncryptFunc(plaintext, encodedSalt, passphrase)
 	}
@@ -81,7 +86,9 @@ func (m *MockEncryptionService) Encrypt(plaintext []byte, encodedSalt, passphras
 }
 
 // Decrypt mocks the Decrypt method.
-func (m *MockEncryptionService) Decrypt(ciphertext, encodedSalt, passphrase string) ([]byte, error) {
+func (m *MockEncryptionService) Decrypt(
+	ciphertext, encodedSalt, passphrase string,
+) ([]byte, error) {
 	if m.DecryptFunc != nil {
 		return m.DecryptFunc(ciphertext, encodedSalt, passphrase)
 	}
@@ -291,7 +298,11 @@ func (m *MockPassphraseService) ClearAll(ctx context.Context) error {
 }
 
 // Validate mocks the Validate method.
-func (m *MockPassphraseService) Validate(ctx context.Context, vault *model.Vault, passphrase string) error {
+func (m *MockPassphraseService) Validate(
+	ctx context.Context,
+	vault *model.Vault,
+	passphrase string,
+) error {
 	if m.ValidateFunc != nil {
 		return m.ValidateFunc(ctx, vault, passphrase)
 	}

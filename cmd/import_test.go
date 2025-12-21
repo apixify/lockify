@@ -19,7 +19,13 @@ type mockImportUseCase struct {
 	receivedOverwrite bool
 }
 
-func (m *mockImportUseCase) Execute(ctx context.Context, env string, format value.FileFormat, r io.Reader, overwrite bool) (int, int, error) {
+func (m *mockImportUseCase) Execute(
+	ctx context.Context,
+	env string,
+	format value.FileFormat,
+	r io.Reader,
+	overwrite bool,
+) (int, int, error) {
 	m.receivedEnv = env
 	m.receivedFormat = format
 	m.receivedOverwrite = overwrite

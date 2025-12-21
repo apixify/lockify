@@ -65,7 +65,11 @@ func (service *PassphraseService) ClearAll(ctx context.Context) error {
 }
 
 // Validate validates a passphrase against a vault's fingerprint
-func (service *PassphraseService) Validate(ctx context.Context, vault *model.Vault, passphrase string) error {
+func (service *PassphraseService) Validate(
+	ctx context.Context,
+	vault *model.Vault,
+	passphrase string,
+) error {
 	if vault == nil {
 		return fmt.Errorf("vault cannot be nil")
 	}

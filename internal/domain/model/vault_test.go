@@ -8,12 +8,14 @@ import (
 	"time"
 )
 
-const testEnv = "test"
-const testFingerprint = "test-fingerprint"
-const testPassphrase = "test-passphrase"
-const testSalt = "test-salt"
-const testKey = "test-key"
-const testValue = "test-value"
+const (
+	testEnv         = "test"
+	testFingerprint = "test-fingerprint"
+	testPassphrase  = "test-passphrase"
+	testSalt        = "test-salt"
+	testKey         = "test-key"
+	testValue       = "test-value"
+)
 
 func createTestVault(t *testing.T) *Vault {
 	t.Helper()

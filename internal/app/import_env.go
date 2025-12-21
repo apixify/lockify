@@ -40,7 +40,13 @@ func NewImportEnvUseCase(
 }
 
 // Execute imports entries from a reader into the vault.
-func (useCase *ImportEnvUseCase) Execute(ctx context.Context, env string, format value.FileFormat, r io.Reader, overwrite bool) (int, int, error) {
+func (useCase *ImportEnvUseCase) Execute(
+	ctx context.Context,
+	env string,
+	format value.FileFormat,
+	r io.Reader,
+	overwrite bool,
+) (int, int, error) {
 	imported := 0
 	skipped := 0
 	vault, err := useCase.vaultService.Open(ctx, env)

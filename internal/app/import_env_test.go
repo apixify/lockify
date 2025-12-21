@@ -57,7 +57,6 @@ func TestImportEnvUseCase_Execute_Json(t *testing.T) {
 		reader,
 		false,
 	)
-
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

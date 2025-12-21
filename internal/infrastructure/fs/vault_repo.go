@@ -20,7 +20,10 @@ type FileVaultRepository struct {
 }
 
 // NewFileVaultRepository creates a new file-based vault repository
-func NewFileVaultRepository(fs storage.FileSystem, config config.VaultConfig) repository.VaultRepository {
+func NewFileVaultRepository(
+	fs storage.FileSystem,
+	config config.VaultConfig,
+) repository.VaultRepository {
 	return &FileVaultRepository{fs, config}
 }
 
