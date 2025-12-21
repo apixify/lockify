@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/ahmed-abdelgawad92/lockify/internal/config"
 	"github.com/ahmed-abdelgawad92/lockify/internal/domain/repository"
 	"github.com/ahmed-abdelgawad92/lockify/internal/domain/service"
 )
@@ -41,7 +42,7 @@ func (useCase *RotatePassphraseUseCase) Execute(ctx context.Context, env, curren
 	}
 
 	currentSalt := vault.Meta.Salt
-	newSalt, err := useCase.hashService.GenerateSalt(16)
+	newSalt, err := useCase.hashService.GenerateSalt(config.DefaultSaltSize)
 	if err != nil {
 		return fmt.Errorf("failed to generate salt: %w", err)
 	}

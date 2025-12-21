@@ -10,6 +10,13 @@ import (
 	"github.com/ahmed-abdelgawad92/lockify/internal/domain/service"
 )
 
+const (
+	// dotenvKeyValueParts is the expected number of parts when splitting a dotenv line by "=".
+	dotenvKeyValueParts = 2
+	// minValueLength is the minimum length for a value to be considered (needs at least 1 char).
+	minValueLength = 2
+)
+
 // ImportService implements ImportService for filesystem-based imports.
 type ImportService struct {
 }
@@ -46,15 +53,15 @@ func (service *ImportService) FromDotEnv(r io.Reader) (map[string]string, error)
 			continue
 		}
 
-		parts := strings.SplitN(line, "=", 2)
-		if len(parts) != 2 {
+		parts := strings.SplitN(line, "=", dotenvKeyValueParts)
+		if len(parts) != dotenvKeyValueParts {
 			continue
 		}
 
 		key := strings.TrimSpace(parts[0])
 		value := strings.TrimSpace(parts[1])
 
-		if len(value) >= 2 {
+		if len(value) >= minValueLength {
 			if (value[0] == '"' && value[len(value)-1] == '"') ||
 				(value[0] == '\'' && value[len(value)-1] == '\'') {
 				value = value[1 : len(value)-1]

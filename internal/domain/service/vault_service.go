@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/ahmed-abdelgawad92/lockify/internal/config"
 	"github.com/ahmed-abdelgawad92/lockify/internal/domain/model"
 	"github.com/ahmed-abdelgawad92/lockify/internal/domain/repository"
 )
@@ -51,7 +52,7 @@ func (vs *VaultService) Create(ctx context.Context, env string) (*model.Vault, e
 		return nil, fmt.Errorf("failed to hash passphrase: %w", err)
 	}
 
-	salt, err := vs.hashService.GenerateSalt(16)
+	salt, err := vs.hashService.GenerateSalt(config.DefaultSaltSize)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate salt: %w", err)
 	}
