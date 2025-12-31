@@ -9,7 +9,7 @@ import (
 
 // InitUc defines the interface for initializing a new vault.
 type InitUc interface {
-	Execute(context.Context, string) (*model.Vault, error)
+	Execute(context.Context, string, bool) (*model.Vault, error)
 }
 
 // InitializeVaultUseCase implements the use case for initializing a new vault.
@@ -22,10 +22,11 @@ func NewInitializeVaultUseCase(vaultService service.VaultServiceInterface) InitU
 	return &InitializeVaultUseCase{vaultService}
 }
 
-// Execute initializes a new vault for the specified environment.
+// Execute initializes a new vault for the specified environment with cache preference.
 func (useCase *InitializeVaultUseCase) Execute(
 	ctx context.Context,
 	env string,
+	shouldCache bool,
 ) (*model.Vault, error) {
-	return useCase.vaultService.Create(ctx, env)
+	return useCase.vaultService.Create(ctx, env, shouldCache)
 }

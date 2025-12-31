@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/AlecAivazis/survey/v2"
 	"github.com/ahmed-abdelgawad92/lockify/internal/domain/model"
 	"github.com/ahmed-abdelgawad92/lockify/internal/domain/service"
 )
@@ -14,6 +13,7 @@ import (
 type PassphraseService struct {
 	cache      service.Cache
 	cryptoUtil service.HashService
+	prompt     service.PromptService
 	envVar     string
 }
 
@@ -21,13 +21,14 @@ type PassphraseService struct {
 func NewPassphraseService(
 	cache service.Cache,
 	cryptoUtil service.HashService,
+	prompt service.PromptService,
 	envVar string,
 ) service.PassphraseService {
 	if envVar == "" {
 		envVar = "LOCKIFY_PASSPHRASE"
 	}
 
-	return &PassphraseService{cache, cryptoUtil, envVar}
+	return &PassphraseService{cache, cryptoUtil, prompt, envVar}
 }
 
 // Get retrieves a passphrase from environment variable, keyring cache, or user input
@@ -83,14 +84,71 @@ func (s *PassphraseService) Validate(
 	return s.cryptoUtil.Verify(vault.Meta.FingerPrint, passphrase)
 }
 
-// getFromUser prompts the user for a passphrase
-func (s *PassphraseService) getFromUser(ctx context.Context, env string) (string, error) {
-	var passphrase string
-	prompt := &survey.Password{
-		Message: fmt.Sprintf("Enter passphrase for environment %q:", env),
+// GetWithConfirmation prompts the user for a passphrase with confirmation (for new vaults)
+func (s *PassphraseService) GetWithConfirmation(
+	ctx context.Context,
+	env string,
+	shouldCache bool,
+) (string, error) {
+	if env == "" {
+		return "", fmt.Errorf("environment cannot be empty")
 	}
 
-	if err := survey.AskOne(prompt, &passphrase); err != nil {
+	passphrase, err := s.prompt.GetPassphraseInput(
+		fmt.Sprintf("Enter passphrase for environment %q:", env),
+	)
+	if err != nil {
+		return "", fmt.Errorf("failed to get passphrase: %w", err)
+	}
+	if passphrase == "" {
+		return "", fmt.Errorf("passphrase cannot be empty")
+	}
+
+	confirmation, err := s.prompt.GetPassphraseInput("Confirm passphrase:")
+	if err != nil {
+		return "", fmt.Errorf("failed to get passphrase confirmation: %w", err)
+	}
+
+	if passphrase != confirmation {
+		return "", fmt.Errorf("passphrases do not match")
+	}
+
+	if !shouldCache {
+		shouldCacheInteractive, err := s.prompt.GetConfirmation(
+			"Cache passphrase in system keyring?",
+			false,
+		)
+		shouldCache = err == nil && shouldCacheInteractive
+	}
+
+	if shouldCache {
+		if err := s.Cache(ctx, env, passphrase); err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: failed to cache passphrase: %v\n", err)
+		}
+	}
+
+	return passphrase, nil
+}
+
+// Cache caches a passphrase for an environment
+func (s *PassphraseService) Cache(ctx context.Context, env, passphrase string) error {
+	if env == "" {
+		return fmt.Errorf("environment cannot be empty")
+	}
+	if passphrase == "" {
+		return fmt.Errorf("passphrase cannot be empty")
+	}
+
+	key := s.getKeyringKey(env)
+	return s.cache.Set(key, passphrase)
+}
+
+// getFromUser prompts the user for a passphrase (for existing vaults)
+func (s *PassphraseService) getFromUser(ctx context.Context, env string) (string, error) {
+	passphrase, err := s.prompt.GetPassphraseInput(
+		fmt.Sprintf("Enter passphrase for environment %q:", env),
+	)
+	if err != nil {
 		return "", fmt.Errorf("failed to get passphrase: %w", err)
 	}
 
@@ -98,10 +156,13 @@ func (s *PassphraseService) getFromUser(ctx context.Context, env string) (string
 		return "", fmt.Errorf("passphrase cannot be empty")
 	}
 
-	// Cache passphrase in keyring (best effort, ignore errors)
-	key := s.getKeyringKey(env)
-	//nolint:errcheck // We don't want to return an error here
-	s.cache.Set(key, passphrase)
+	shouldCache, err := s.prompt.GetConfirmation("Cache passphrase in system keyring?", false)
+	if err == nil && shouldCache {
+		if err := s.Cache(ctx, env, passphrase); err != nil {
+			// Best effort, don't fail if caching fails
+			fmt.Fprintf(os.Stderr, "Warning: failed to cache passphrase: %v\n", err)
+		}
+	}
 
 	return passphrase, nil
 }

@@ -1,11 +1,11 @@
-package cmd
+package vault
 
 import (
 	"fmt"
 	"os"
 
 	"github.com/ahmed-abdelgawad92/lockify/internal/app"
-	"github.com/ahmed-abdelgawad92/lockify/internal/di"
+	"github.com/ahmed-abdelgawad92/lockify/internal/cli"
 	"github.com/ahmed-abdelgawad92/lockify/internal/domain"
 	"github.com/ahmed-abdelgawad92/lockify/internal/domain/model/value"
 	"github.com/spf13/cobra"
@@ -15,11 +15,16 @@ import (
 type ImportCommand struct {
 	useCase app.ImportEnvUc
 	logger  domain.Logger
+	cmdCtx  *cli.CommandContext
 }
 
 // NewImportCommand creates a new import command instance.
-func NewImportCommand(useCase app.ImportEnvUc, logger domain.Logger) (*cobra.Command, error) {
-	cmd := &ImportCommand{useCase, logger}
+func NewImportCommand(
+	useCase app.ImportEnvUc,
+	logger domain.Logger,
+	cmdCtx *cli.CommandContext,
+) (*cobra.Command, error) {
+	cmd := &ImportCommand{useCase, logger, cmdCtx}
 
 	// lockify import .env --env prod --format dotenv
 	// lockify import config.json --env staging --format json
@@ -55,7 +60,7 @@ If no file is specified, the command reads from stdin.`,
 }
 
 func (c *ImportCommand) runE(cmd *cobra.Command, args []string) error {
-	env, err := requireEnvFlag(cmd)
+	env, err := c.cmdCtx.RequireEnvFlag(cmd)
 	if err != nil {
 		return err
 	}
@@ -64,7 +69,7 @@ func (c *ImportCommand) runE(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		c.logger.Error("failed to get overwrite flag: %w", err)
 	}
-	format, err := requireStringFlag(cmd, "format")
+	format, err := c.cmdCtx.RequireStringFlag(cmd, "format")
 	if err != nil {
 		return fmt.Errorf("failed to retrieve format flag: %w", err)
 	}
@@ -88,7 +93,7 @@ func (c *ImportCommand) runE(cmd *cobra.Command, args []string) error {
 	}
 
 	c.logger.Progress("Importing variables from %s...", filename)
-	ctx := getContext()
+	ctx := c.cmdCtx.GetContext()
 	imported, skipped, err := c.useCase.Execute(ctx, env, fileFormat, file, overwrite)
 	if err != nil {
 		return fmt.Errorf("failed to import env variables: %w", err)
@@ -97,14 +102,6 @@ func (c *ImportCommand) runE(cmd *cobra.Command, args []string) error {
 	c.logger.Success("Imported %d key(s), skipped %d key(s)", imported, skipped)
 
 	return nil
-}
-
-func init() {
-	importCmd, err := NewImportCommand(di.BuildImportEnv(), di.GetLogger())
-	if err != nil {
-		panic(err)
-	}
-	rootCmd.AddCommand(importCmd)
 }
 
 func getFile(args []string) (*os.File, string, error) {

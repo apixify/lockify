@@ -30,23 +30,6 @@ func (f *OSFileSystem) ReadFile(path string) ([]byte, error) {
 }
 
 // Stat returns file information
-func (f *OSFileSystem) Stat(path string) (storage.FileInfo, error) {
-	info, err := os.Stat(path)
-	if err != nil {
-		return nil, err
-	}
-	return &fileInfo{info}, nil
-}
-
-// fileInfo wraps os.FileInfo
-type fileInfo struct {
-	info os.FileInfo
-}
-
-func (f *fileInfo) IsDir() bool {
-	return f.info.IsDir()
-}
-
-func (f *fileInfo) Mode() uint32 {
-	return uint32(f.info.Mode())
+func (f *OSFileSystem) Stat(path string) (os.FileInfo, error) {
+	return os.Stat(path)
 }

@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"github.com/ahmed-abdelgawad92/lockify/internal/di"
 	"github.com/ahmed-abdelgawad92/lockify/internal/domain"
 	"github.com/spf13/cobra"
 )
@@ -30,9 +29,4 @@ func NewVersionCommand(logger domain.Logger) *cobra.Command {
 func (c *VersionCommand) runE(cmd *cobra.Command, args []string) error {
 	c.logger.Output("Lockify CLI v%s\n", Version)
 	return nil
-}
-
-func init() {
-	versionCmd := NewVersionCommand(di.GetLogger())
-	rootCmd.AddCommand(versionCmd)
 }

@@ -36,7 +36,7 @@ func TestCreate_Success(t *testing.T) {
 		&test.MockPassphraseService{},
 		&test.MockHashService{},
 	)
-	vault, err := vaultService.Create(context.Background(), "test")
+	vault, err := vaultService.Create(context.Background(), "test", false)
 	if err != nil {
 		t.Fatalf("Create() returned unexpected error: %v", err)
 	}
@@ -69,7 +69,7 @@ func TestCreate_VaultAlreadyExists(t *testing.T) {
 		&test.MockHashService{},
 	)
 
-	_, err := vaultService.Create(context.Background(), "test")
+	_, err := vaultService.Create(context.Background(), "test", false)
 	if err == nil {
 		t.Fatal("Create() with existing vault expected error, got nil")
 	}
@@ -90,7 +90,7 @@ func TestCreate_RepositoryExistsError(t *testing.T) {
 		&test.MockHashService{},
 	)
 
-	_, err := vaultService.Create(context.Background(), "test")
+	_, err := vaultService.Create(context.Background(), "test", false)
 	if err == nil {
 		t.Fatal("Create() with repository error expected error, got nil")
 	}
@@ -104,7 +104,7 @@ func TestCreate_RepositoryExistsError(t *testing.T) {
 
 func TestCreate_PassphraseGetError(t *testing.T) {
 	passphrase := &test.MockPassphraseService{
-		GetFunc: func(ctx context.Context, env string) (string, error) {
+		GetWithConfirmationFunc: func(ctx context.Context, env string, shouldCache bool) (string, error) {
 			return "", errors.New("passphrase error")
 		},
 	}
@@ -114,7 +114,7 @@ func TestCreate_PassphraseGetError(t *testing.T) {
 		&test.MockHashService{},
 	)
 
-	_, err := vaultService.Create(context.Background(), "test")
+	_, err := vaultService.Create(context.Background(), "test", false)
 	if err == nil {
 		t.Fatal("Create() with passphrase error expected error, got nil")
 	}
@@ -135,7 +135,7 @@ func TestCreate_HashError(t *testing.T) {
 		hash,
 	)
 
-	_, err := vaultService.Create(context.Background(), "test")
+	_, err := vaultService.Create(context.Background(), "test", false)
 	if err == nil {
 		t.Fatal("Create() with hash error expected error, got nil")
 	}
@@ -156,7 +156,7 @@ func TestCreate_GenerateSaltError(t *testing.T) {
 		hash,
 	)
 
-	_, err := vaultService.Create(context.Background(), "test")
+	_, err := vaultService.Create(context.Background(), "test", false)
 	if err == nil {
 		t.Fatal("Create() with salt error expected error, got nil")
 	}
@@ -177,7 +177,7 @@ func TestCreate_RepositoryCreateError(t *testing.T) {
 		&test.MockHashService{},
 	)
 
-	_, err := vaultService.Create(context.Background(), "test")
+	_, err := vaultService.Create(context.Background(), "test", false)
 	if err == nil {
 		t.Fatal("Create() with repository create error expected error, got nil")
 	}

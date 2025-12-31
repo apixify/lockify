@@ -12,6 +12,7 @@ import (
 type MockPromptService struct {
 	GetUserInputFunc       func(isSecret bool) (key, value string, err error)
 	GetPassphraseInputFunc func(message string) (string, error)
+	GetConfirmationFunc    func(message string, defaultValue bool) (bool, error)
 }
 
 // GetUserInputForKeyAndValue mocks the GetUserInputForKeyAndValue method.
@@ -33,11 +34,19 @@ func (m *MockPromptService) GetPassphraseInput(message string) (string, error) {
 	return "test_passphrase", nil
 }
 
+// GetConfirmation mocks the GetConfirmation method.
+func (m *MockPromptService) GetConfirmation(message string, defaultValue bool) (bool, error) {
+	if m.GetConfirmationFunc != nil {
+		return m.GetConfirmationFunc(message, defaultValue)
+	}
+	return defaultValue, nil
+}
+
 // MockVaultService mocks the VaultService for testing.
 type MockVaultService struct {
 	OpenFunc   func(ctx context.Context, env string) (*model.Vault, error)
 	SaveFunc   func(ctx context.Context, vault *model.Vault) error
-	CreateFunc func(ctx context.Context, env string) (*model.Vault, error)
+	CreateFunc func(ctx context.Context, env string, shouldCache bool) (*model.Vault, error)
 }
 
 // Open mocks the Open method.
@@ -59,9 +68,13 @@ func (m *MockVaultService) Save(ctx context.Context, vault *model.Vault) error {
 }
 
 // Create mocks the Create method.
-func (m *MockVaultService) Create(ctx context.Context, env string) (*model.Vault, error) {
+func (m *MockVaultService) Create(
+	ctx context.Context,
+	env string,
+	shouldCache bool,
+) (*model.Vault, error) {
 	if m.CreateFunc != nil {
-		return m.CreateFunc(ctx, env)
+		return m.CreateFunc(ctx, env, shouldCache)
 	}
 	vault, _ := model.NewVault(env, "test-fingerprint", "test-salt")
 	return vault, nil
@@ -267,10 +280,12 @@ func (m *MockHashService) GenerateSalt(size int) (string, error) {
 
 // MockPassphraseService mocks the PassphraseService for testing.
 type MockPassphraseService struct {
-	GetFunc      func(ctx context.Context, env string) (string, error)
-	ClearFunc    func(ctx context.Context, env string) error
-	ClearAllFunc func(ctx context.Context) error
-	ValidateFunc func(ctx context.Context, vault *model.Vault, passphrase string) error
+	GetFunc                 func(ctx context.Context, env string) (string, error)
+	GetWithConfirmationFunc func(ctx context.Context, env string, shouldCache bool) (string, error)
+	CacheFunc               func(ctx context.Context, env string, passphrase string) error
+	ClearFunc               func(ctx context.Context, env string) error
+	ClearAllFunc            func(ctx context.Context) error
+	ValidateFunc            func(ctx context.Context, vault *model.Vault, passphrase string) error
 }
 
 // Get mocks the Get method.
@@ -279,6 +294,26 @@ func (m *MockPassphraseService) Get(ctx context.Context, env string) (string, er
 		return m.GetFunc(ctx, env)
 	}
 	return "test-passphrase", nil
+}
+
+// GetWithConfirmation mocks the GetWithConfirmation method.
+func (m *MockPassphraseService) GetWithConfirmation(
+	ctx context.Context,
+	env string,
+	shouldCache bool,
+) (string, error) {
+	if m.GetWithConfirmationFunc != nil {
+		return m.GetWithConfirmationFunc(ctx, env, shouldCache)
+	}
+	return "test-passphrase", nil
+}
+
+// Cache mocks the Cache method.
+func (m *MockPassphraseService) Cache(ctx context.Context, env, passphrase string) error {
+	if m.CacheFunc != nil {
+		return m.CacheFunc(ctx, env, passphrase)
+	}
+	return nil
 }
 
 // Clear mocks the Clear method.

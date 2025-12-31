@@ -15,7 +15,7 @@ func TestInitializeVaultUseCase_Execute_Success(t *testing.T) {
 	expectedVault, _ := model.NewVault(envTest, fingerprintTest, saltTest)
 
 	vaultService := &test.MockVaultService{
-		CreateFunc: func(ctx context.Context, env string) (*model.Vault, error) {
+		CreateFunc: func(ctx context.Context, env string, shouldCache bool) (*model.Vault, error) {
 			if env != envTest {
 				t.Errorf("Create() called with env %q, want %q", env, envTest)
 			}
@@ -25,7 +25,7 @@ func TestInitializeVaultUseCase_Execute_Success(t *testing.T) {
 
 	useCase := NewInitializeVaultUseCase(vaultService)
 
-	vault, err := useCase.Execute(context.Background(), envTest)
+	vault, err := useCase.Execute(context.Background(), envTest, false)
 
 	assert.Nil(t, err, fmt.Sprintf("Execute() returned unexpected error: %v", err))
 	assert.NotNil(t, vault, "Execute() should return a vault, but got nil")
@@ -57,14 +57,14 @@ func TestInitializeVaultUseCase_Execute_CreateError(t *testing.T) {
 	expectedError := errors.New("vault already exists")
 
 	vaultService := &test.MockVaultService{
-		CreateFunc: func(ctx context.Context, env string) (*model.Vault, error) {
+		CreateFunc: func(ctx context.Context, env string, shouldCache bool) (*model.Vault, error) {
 			return nil, expectedError
 		},
 	}
 
 	useCase := NewInitializeVaultUseCase(vaultService)
 
-	vault, err := useCase.Execute(context.Background(), envTest)
+	vault, err := useCase.Execute(context.Background(), envTest, false)
 
 	assert.NotNil(t, err, "Execute() should return error, got nil")
 	assert.Nil(t, vault, fmt.Sprintf("Execute() should return nil vault on error, got %v", vault))

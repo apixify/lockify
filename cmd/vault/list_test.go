@@ -1,4 +1,4 @@
-package cmd
+package vault
 
 import (
 	"bytes"
@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/ahmed-abdelgawad92/lockify/internal/cli"
 	"github.com/ahmed-abdelgawad92/lockify/test"
 	"github.com/ahmed-abdelgawad92/lockify/test/assert"
 )
@@ -27,7 +28,7 @@ func TestListCommand_Success(t *testing.T) {
 	mockUseCase := &mockListUseCase{}
 	mockLogger := &test.MockLogger{}
 
-	cmd, _ := NewListCommand(mockUseCase, mockLogger)
+	cmd, _ := NewListCommand(mockUseCase, mockLogger, cli.NewCommandContext())
 	if err := cmd.Flags().Set("env", "test"); err != nil {
 		t.Fatalf("failed to set env flag: %v", err)
 	}
@@ -55,7 +56,7 @@ func TestListCommand_EmptyKeys(t *testing.T) {
 	}
 	mockLogger := &test.MockLogger{}
 
-	cmd, _ := NewListCommand(mockUseCase, mockLogger)
+	cmd, _ := NewListCommand(mockUseCase, mockLogger, cli.NewCommandContext())
 	if err := cmd.Flags().Set("env", "test"); err != nil {
 		t.Fatalf("failed to set env flag: %v", err)
 	}
@@ -75,12 +76,12 @@ func TestListCommand_EmptyKeys(t *testing.T) {
 func TestListCommand_UseCaseError(t *testing.T) {
 	mockUseCase := &mockListUseCase{
 		executeFunc: func(ctx context.Context, env string) ([]string, error) {
-			return nil, fmt.Errorf("%s", errMsgExecuteFailed)
+			return nil, fmt.Errorf("%s", test.ErrMsgExecuteFailed)
 		},
 	}
 	mockLogger := &test.MockLogger{}
 
-	cmd, _ := NewListCommand(mockUseCase, mockLogger)
+	cmd, _ := NewListCommand(mockUseCase, mockLogger, cli.NewCommandContext())
 	if err := cmd.Flags().Set("env", "test"); err != nil {
 		t.Fatalf("failed to set env flag: %v", err)
 	}
@@ -91,7 +92,7 @@ func TestListCommand_UseCaseError(t *testing.T) {
 
 	err := cmd.RunE(cmd, nil)
 	assert.NotNil(t, err)
-	assert.Contains(t, errMsgExecuteFailed, err.Error())
+	assert.Contains(t, test.ErrMsgExecuteFailed, err.Error())
 	assert.Count(t, 1, mockLogger.ProgressLogs)
 	assert.Count(t, 0, mockLogger.SuccessLogs)
 }
@@ -100,7 +101,7 @@ func TestListCommand_Error_Required_Env(t *testing.T) {
 	mockUseCase := &mockListUseCase{}
 	mockLogger := &test.MockLogger{}
 
-	cmd, _ := NewListCommand(mockUseCase, mockLogger)
+	cmd, _ := NewListCommand(mockUseCase, mockLogger, cli.NewCommandContext())
 
 	var buf bytes.Buffer
 	cmd.SetOut(&buf)
@@ -108,7 +109,7 @@ func TestListCommand_Error_Required_Env(t *testing.T) {
 
 	err := cmd.RunE(cmd, nil)
 	assert.NotNil(t, err)
-	assert.Contains(t, errMsgEmptyEnv, err.Error())
+	assert.Contains(t, cli.ErrMsgEmptyEnv, err.Error())
 	// Progress is logged before flag validation
 	assert.Count(t, 1, mockLogger.ProgressLogs)
 	assert.Count(t, 0, mockLogger.SuccessLogs)
@@ -118,7 +119,7 @@ func TestListCommand_Error_Empty_Env(t *testing.T) {
 	mockUseCase := &mockListUseCase{}
 	mockLogger := &test.MockLogger{}
 
-	cmd, _ := NewListCommand(mockUseCase, mockLogger)
+	cmd, _ := NewListCommand(mockUseCase, mockLogger, cli.NewCommandContext())
 	if err := cmd.Flags().Set("env", ""); err != nil {
 		t.Fatalf("failed to set env flag: %v", err)
 	}
@@ -129,7 +130,7 @@ func TestListCommand_Error_Empty_Env(t *testing.T) {
 
 	err := cmd.RunE(cmd, nil)
 	assert.NotNil(t, err)
-	assert.Contains(t, errMsgEmptyEnv, err.Error())
+	assert.Contains(t, cli.ErrMsgEmptyEnv, err.Error())
 	assert.Count(t, 1, mockLogger.ProgressLogs)
 	assert.Count(t, 0, mockLogger.SuccessLogs)
 }

@@ -1,4 +1,4 @@
-package cmd
+package vault
 
 import (
 	"bytes"
@@ -6,18 +6,23 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/ahmed-abdelgawad92/lockify/internal/cli"
 	"github.com/ahmed-abdelgawad92/lockify/internal/domain/model"
 	"github.com/ahmed-abdelgawad92/lockify/test"
 	"github.com/ahmed-abdelgawad92/lockify/test/assert"
 )
 
 type mockInitUseCase struct {
-	executeFunc func(ctx context.Context, env string) (*model.Vault, error)
+	executeFunc func(ctx context.Context, env string, shouldCache bool) (*model.Vault, error)
 }
 
-func (m *mockInitUseCase) Execute(ctx context.Context, env string) (*model.Vault, error) {
+func (m *mockInitUseCase) Execute(
+	ctx context.Context,
+	env string,
+	shouldCache bool,
+) (*model.Vault, error) {
 	if m.executeFunc != nil {
-		return m.executeFunc(ctx, env)
+		return m.executeFunc(ctx, env, shouldCache)
 	}
 	vault, _ := model.NewVault(env, "finger", "salt")
 	vault.SetPath("/tmp/test.vault")
@@ -27,8 +32,9 @@ func (m *mockInitUseCase) Execute(ctx context.Context, env string) (*model.Vault
 func TestInitCommand_Success(t *testing.T) {
 	mockUseCase := &mockInitUseCase{}
 	mockLogger := &test.MockLogger{}
+	cmdCtx := cli.NewCommandContext()
 
-	cmd, _ := NewInitCommand(mockUseCase, mockLogger)
+	cmd, _ := NewInitCommand(mockUseCase, mockLogger, cmdCtx)
 	if err := cmd.Flags().Set("env", "test"); err != nil {
 		t.Fatalf("failed to set env flag: %v", err)
 	}
@@ -48,13 +54,14 @@ func TestInitCommand_Success(t *testing.T) {
 func TestInitCommand_Failed(t *testing.T) {
 	errMsg := "error during execution"
 	mockUseCase := &mockInitUseCase{
-		executeFunc: func(ctx context.Context, env string) (*model.Vault, error) {
+		executeFunc: func(ctx context.Context, env string, shouldCache bool) (*model.Vault, error) {
 			return nil, fmt.Errorf("%s", errMsg)
 		},
 	}
 	mockLogger := &test.MockLogger{}
+	cmdCtx := cli.NewCommandContext()
 
-	cmd, _ := NewInitCommand(mockUseCase, mockLogger)
+	cmd, _ := NewInitCommand(mockUseCase, mockLogger, cmdCtx)
 	if err := cmd.Flags().Set("env", "test"); err != nil {
 		t.Fatalf("failed to set env flag: %v", err)
 	}
@@ -74,8 +81,9 @@ func TestInitCommand_Failed(t *testing.T) {
 func TestInitCommand_Error_Required_Env(t *testing.T) {
 	mockUseCase := &mockInitUseCase{}
 	mockLogger := &test.MockLogger{}
+	cmdCtx := cli.NewCommandContext()
 
-	cmd, _ := NewInitCommand(mockUseCase, mockLogger)
+	cmd, _ := NewInitCommand(mockUseCase, mockLogger, cmdCtx)
 
 	var buf bytes.Buffer
 	cmd.SetOut(&buf)
@@ -83,7 +91,7 @@ func TestInitCommand_Error_Required_Env(t *testing.T) {
 
 	err := cmd.RunE(cmd, nil)
 	assert.NotNil(t, err)
-	assert.Contains(t, errMsgEmptyEnv, err.Error())
+	assert.Contains(t, cli.ErrMsgEmptyEnv, err.Error())
 	assert.Count(t, 0, mockLogger.ProgressLogs)
 	assert.Count(t, 0, mockLogger.SuccessLogs)
 }
@@ -91,8 +99,9 @@ func TestInitCommand_Error_Required_Env(t *testing.T) {
 func TestInitCommand_Error_Empty_Env(t *testing.T) {
 	mockUseCase := &mockInitUseCase{}
 	mockLogger := &test.MockLogger{}
+	cmdCtx := cli.NewCommandContext()
 
-	cmd, _ := NewInitCommand(mockUseCase, mockLogger)
+	cmd, _ := NewInitCommand(mockUseCase, mockLogger, cmdCtx)
 	if err := cmd.Flags().Set("env", ""); err != nil {
 		t.Fatalf("failed to set env flag: %v", err)
 	}
@@ -103,7 +112,7 @@ func TestInitCommand_Error_Empty_Env(t *testing.T) {
 
 	err := cmd.RunE(cmd, nil)
 	assert.NotNil(t, err)
-	assert.Contains(t, errMsgEmptyEnv, err.Error())
+	assert.Contains(t, cli.ErrMsgEmptyEnv, err.Error())
 	assert.Count(t, 0, mockLogger.ProgressLogs)
 	assert.Count(t, 0, mockLogger.SuccessLogs)
 }

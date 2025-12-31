@@ -1,10 +1,10 @@
-package cmd
+package vault
 
 import (
 	"fmt"
 
 	"github.com/ahmed-abdelgawad92/lockify/internal/app"
-	"github.com/ahmed-abdelgawad92/lockify/internal/di"
+	"github.com/ahmed-abdelgawad92/lockify/internal/cli"
 	"github.com/ahmed-abdelgawad92/lockify/internal/domain"
 	"github.com/spf13/cobra"
 )
@@ -13,11 +13,16 @@ import (
 type InitCommand struct {
 	useCase app.InitUc
 	logger  domain.Logger
+	cmdCtx  *cli.CommandContext
 }
 
 // NewInitCommand creates a new init command instance.
-func NewInitCommand(initUc app.InitUc, logger domain.Logger) (*cobra.Command, error) {
-	cmd := &InitCommand{useCase: initUc, logger: logger}
+func NewInitCommand(
+	initUc app.InitUc,
+	logger domain.Logger,
+	cmdCtx *cli.CommandContext,
+) (*cobra.Command, error) {
+	cmd := &InitCommand{useCase: initUc, logger: logger, cmdCtx: cmdCtx}
 
 	// lockify init --env [env]
 	cobraCmd := &cobra.Command{
@@ -42,27 +47,28 @@ func NewInitCommand(initUc app.InitUc, logger domain.Logger) (*cobra.Command, er
 	return cobraCmd, nil
 }
 
-func (c *InitCommand) runE(cmd *cobra.Command, args []string) error {
-	env, err := requireEnvFlag(cmd)
+func (c *InitCommand) runE(cobraCmd *cobra.Command, args []string) error {
+	env, err := c.cmdCtx.RequireEnvFlag(cobraCmd)
 	if err != nil {
 		return err
 	}
 
+	// Get cache flag if it exists (from root command's persistent flags)
+	shouldCache := false
+	if cobraCmd.Flags().Lookup("cache") != nil {
+		shouldCache, err = c.cmdCtx.GetCacheFlag(cobraCmd)
+		if err != nil {
+			return err
+		}
+	}
+
 	c.logger.Progress("Initializing Lockify vault")
-	ctx := getContext()
-	vault, err := c.useCase.Execute(ctx, env)
+	ctx := c.cmdCtx.GetContext()
+	vault, err := c.useCase.Execute(ctx, env, shouldCache)
 	if err != nil {
 		return err
 	}
 
 	c.logger.Success("Lockify vault initialized at %s", vault.Path())
 	return nil
-}
-
-func init() {
-	initCmd, err := NewInitCommand(di.BuildInitializeVault(), di.GetLogger())
-	if err != nil {
-		panic(err)
-	}
-	rootCmd.AddCommand(initCmd)
 }

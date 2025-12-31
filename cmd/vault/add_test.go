@@ -1,4 +1,4 @@
-package cmd
+package vault
 
 import (
 	"bytes"
@@ -8,10 +8,9 @@ import (
 	"testing"
 
 	"github.com/ahmed-abdelgawad92/lockify/internal/app"
+	"github.com/ahmed-abdelgawad92/lockify/internal/cli"
 	"github.com/ahmed-abdelgawad92/lockify/test"
 )
-
-const errMsgExecuteFailed = "execute failed"
 
 var addTestConstants = struct {
 	env   string
@@ -46,7 +45,7 @@ func TestAddCommand_Success(t *testing.T) {
 		},
 	}
 
-	cmd, _ := NewAddCommand(mockUseCase, mockPrompt, mockLogger)
+	cmd, _ := NewAddCommand(mockUseCase, mockPrompt, mockLogger, cli.NewCommandContext())
 	if err := cmd.Flags().Set("env", addTestConstants.env); err != nil {
 		t.Fatalf("failed to set env flag: %v", err)
 	}
@@ -75,7 +74,7 @@ func TestAddCommand_Success(t *testing.T) {
 func TestAddCommand_UseCaseError(t *testing.T) {
 	mockUseCase := &mockAddUseCase{
 		executeFunc: func(ctx context.Context, dto app.AddEntryDTO) error {
-			return fmt.Errorf("%s", errMsgExecuteFailed)
+			return fmt.Errorf("%s", test.ErrMsgExecuteFailed)
 		},
 	}
 	mockLogger := &test.MockLogger{}
@@ -85,7 +84,7 @@ func TestAddCommand_UseCaseError(t *testing.T) {
 		},
 	}
 
-	cmd, _ := NewAddCommand(mockUseCase, mockPrompt, mockLogger)
+	cmd, _ := NewAddCommand(mockUseCase, mockPrompt, mockLogger, cli.NewCommandContext())
 
 	if err := cmd.Flags().Set("env", addTestConstants.env); err != nil {
 		t.Fatalf("failed to set env flag: %v", err)
@@ -99,8 +98,8 @@ func TestAddCommand_UseCaseError(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error but got nil")
 	}
-	if !strings.Contains(err.Error(), errMsgExecuteFailed) {
-		t.Fatalf("expected error to contain %q, got %v", errMsgExecuteFailed, err)
+	if !strings.Contains(err.Error(), test.ErrMsgExecuteFailed) {
+		t.Fatalf("expected error to contain %q, got %v", test.ErrMsgExecuteFailed, err)
 	}
 	if len(mockLogger.ProgressLogs) == 0 {
 		t.Error("expected Progress to be logged")

@@ -1,4 +1,4 @@
-package cmd
+package cache
 
 import (
 	"bytes"
@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/ahmed-abdelgawad92/lockify/internal/app"
+	"github.com/ahmed-abdelgawad92/lockify/internal/cli"
 	"github.com/ahmed-abdelgawad92/lockify/test"
 	"github.com/ahmed-abdelgawad92/lockify/test/assert"
 )
@@ -25,13 +26,17 @@ func (m *mockClearUseCase) Execute(ctx context.Context) error {
 }
 
 func TestClearCommand_Success(t *testing.T) {
-	mockUseCase := &mockClearUseCase{}
-	buildUseCase := func() app.ClearCachedPassphraseUc {
-		return mockUseCase
-	}
+	mockClearUseCase := &mockClearUseCase{}
+	mockPassphrase := &test.MockPassphraseService{}
+	mockClearEnvUseCase := app.NewClearEnvCachedPassphraseUseCase(mockPassphrase)
 	mockLogger := &test.MockLogger{}
 
-	cmd := NewClearCommand(buildUseCase, mockLogger)
+	cmd := NewClearCommand(
+		mockClearUseCase,
+		mockClearEnvUseCase,
+		mockLogger,
+		cli.NewCommandContext(),
+	)
 
 	var buf bytes.Buffer
 	cmd.SetOut(&buf)
@@ -39,23 +44,28 @@ func TestClearCommand_Success(t *testing.T) {
 
 	err := cmd.RunE(cmd, nil)
 	assert.Nil(t, err)
-	assert.True(t, mockUseCase.executed)
+	assert.True(t, mockClearUseCase.executed)
 	assert.Count(t, 1, mockLogger.ProgressLogs)
 	assert.Count(t, 1, mockLogger.SuccessLogs)
 }
 
 func TestClearCommand_UseCaseError(t *testing.T) {
-	mockUseCase := &mockClearUseCase{
+	mockClearUseCase := &mockClearUseCase{
 		executeFunc: func(ctx context.Context) error {
-			return fmt.Errorf("%s", errMsgExecuteFailed)
+			return fmt.Errorf("%s", test.ErrMsgExecuteFailed)
 		},
 	}
-	buildUseCase := func() app.ClearCachedPassphraseUc {
-		return mockUseCase
-	}
+	mockPassphrase := &test.MockPassphraseService{}
+
+	mockClearEnvUseCase := app.NewClearEnvCachedPassphraseUseCase(mockPassphrase)
 	mockLogger := &test.MockLogger{}
 
-	cmd := NewClearCommand(buildUseCase, mockLogger)
+	cmd := NewClearCommand(
+		mockClearUseCase,
+		mockClearEnvUseCase,
+		mockLogger,
+		cli.NewCommandContext(),
+	)
 
 	var buf bytes.Buffer
 	cmd.SetOut(&buf)
@@ -63,8 +73,8 @@ func TestClearCommand_UseCaseError(t *testing.T) {
 
 	err := cmd.RunE(cmd, nil)
 	assert.NotNil(t, err)
-	assert.Contains(t, errMsgExecuteFailed, err.Error())
-	assert.True(t, mockUseCase.executed)
+	assert.Contains(t, test.ErrMsgExecuteFailed, err.Error())
+	assert.True(t, mockClearUseCase.executed)
 	assert.Count(t, 1, mockLogger.ProgressLogs)
 	assert.Count(t, 0, mockLogger.SuccessLogs)
 	assert.Count(t, 1, mockLogger.ErrorLogs)

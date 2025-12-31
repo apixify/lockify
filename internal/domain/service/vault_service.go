@@ -13,7 +13,7 @@ import (
 type VaultServiceInterface interface {
 	Open(ctx context.Context, env string) (*model.Vault, error)
 	Save(ctx context.Context, vault *model.Vault) error
-	Create(ctx context.Context, env string) (*model.Vault, error)
+	Create(ctx context.Context, env string, shouldCache bool) (*model.Vault, error)
 }
 
 // VaultService implements vault operations including create, open, and save.
@@ -32,8 +32,12 @@ func NewVaultService(
 	return &VaultService{vaultRepo, passphraseService, hashService}
 }
 
-// Create creates a new vault for the specified environment.
-func (vs *VaultService) Create(ctx context.Context, env string) (*model.Vault, error) {
+// Create creates a new vault for the specified environment with cache preference.
+func (vs *VaultService) Create(
+	ctx context.Context,
+	env string,
+	shouldCache bool,
+) (*model.Vault, error) {
 	exists, err := vs.vaultRepo.Exists(ctx, env)
 	if err != nil {
 		return nil, fmt.Errorf("failed to check vault existence: %w", err)
@@ -42,7 +46,7 @@ func (vs *VaultService) Create(ctx context.Context, env string) (*model.Vault, e
 		return nil, fmt.Errorf("vault already exists for environment %q", env)
 	}
 
-	passphrase, err := vs.passphraseService.Get(ctx, env)
+	passphrase, err := vs.passphraseService.GetWithConfirmation(ctx, env, shouldCache)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get passphrase: %w", err)
 	}

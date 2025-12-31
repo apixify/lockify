@@ -32,6 +32,7 @@ func getPassphraseService() service.PassphraseService {
 	return security.NewPassphraseService(
 		getCacheService(),
 		getHashService(),
+		BuildPromptService(),
 		vaultConfig.PassphraseEnv,
 	)
 }
@@ -122,5 +123,14 @@ func BuildImportEnv() app.ImportEnvUc {
 		getImportService(),
 		getEncryptionService(),
 		GetLogger(),
+	)
+}
+
+// BuildCachePassphrase creates and returns a CachePassphrase use case.
+func BuildCachePassphrase() app.CachePassphraseUc {
+	return app.NewCachePassphraseUseCase(
+		getVaultRepository(),
+		getPassphraseService(),
+		getHashService(),
 	)
 }
