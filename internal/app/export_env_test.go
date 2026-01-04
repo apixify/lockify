@@ -16,7 +16,7 @@ func TestExportEnvUseCase_Execute_Json(t *testing.T) {
 	vaultService := &test.MockVaultService{
 		OpenFunc: func(vctx *model.VaultContext) (*model.Vault, error) {
 			vault, _ := model.NewVault(vctx.Env, fingerprintTest, saltTest)
-			vault.SetPassphrase(passphraseTest)
+			_ = test.SetPassphraseForTest(vault, passphraseTest)
 			vault.SetEntry(keyTest, valueTest)
 			return vault, nil
 		},
@@ -46,7 +46,7 @@ func TestExportEnvUseCase_Execute_Dotenv(t *testing.T) {
 	vaultService := &test.MockVaultService{
 		OpenFunc: func(vctx *model.VaultContext) (*model.Vault, error) {
 			vault, _ := model.NewVault(vctx.Env, fingerprintTest, saltTest)
-			vault.SetPassphrase(passphraseTest)
+			_ = test.SetPassphraseForTest(vault, passphraseTest)
 			vault.SetEntry(keyTest, valueTest)
 			return vault, nil
 		},

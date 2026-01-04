@@ -16,7 +16,7 @@ func TestDeleteEntryUseCase_Execute_Success(t *testing.T) {
 	vaultService := &test.MockVaultService{
 		OpenFunc: func(vctx *model.VaultContext) (*model.Vault, error) {
 			savedVault, _ = model.NewVault(vctx.Env, fingerprintTest, saltTest)
-			savedVault.SetPassphrase(passphraseTest)
+			_ = test.SetPassphraseForTest(savedVault, passphraseTest)
 			savedVault.SetEntry(keyTest, base64.StdEncoding.EncodeToString([]byte(valueTest)))
 			return savedVault, nil
 		},
@@ -35,7 +35,7 @@ func TestDeleteEntryUseCase_Execute_EntryNotFound(t *testing.T) {
 	vaultService := &test.MockVaultService{
 		OpenFunc: func(vctx *model.VaultContext) (*model.Vault, error) {
 			savedVault, _ := model.NewVault(vctx.Env, fingerprintTest, saltTest)
-			savedVault.SetPassphrase(passphraseTest)
+			_ = test.SetPassphraseForTest(savedVault, passphraseTest)
 			return savedVault, nil
 		},
 	}

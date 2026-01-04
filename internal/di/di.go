@@ -8,6 +8,7 @@ import (
 	"github.com/ahmed-abdelgawad92/lockify/internal/domain/service"
 	"github.com/ahmed-abdelgawad92/lockify/internal/domain/storage"
 	"github.com/ahmed-abdelgawad92/lockify/internal/infrastructure/cache"
+	"github.com/ahmed-abdelgawad92/lockify/internal/infrastructure/environment"
 	"github.com/ahmed-abdelgawad92/lockify/internal/infrastructure/fs"
 	"github.com/ahmed-abdelgawad92/lockify/internal/infrastructure/logger"
 	"github.com/ahmed-abdelgawad92/lockify/internal/infrastructure/prompt"
@@ -33,6 +34,7 @@ func getPassphraseService() service.PassphraseService {
 		getCacheService(),
 		getHashService(),
 		BuildPromptService(),
+		environment.NewOSEnvironmentProvider(),
 		vaultConfig.PassphraseEnv,
 	)
 }
@@ -50,7 +52,12 @@ func getVaultRepository() repository.VaultRepository {
 }
 
 func getVaultService() service.VaultServiceInterface {
-	return service.NewVaultService(getVaultRepository(), getPassphraseService(), getHashService())
+	return service.NewVaultService(
+		getVaultRepository(),
+		getPassphraseService(),
+		getHashService(),
+		int(config.DefaultSaltSize),
+	)
 }
 
 func getImportService() service.ImportService {
@@ -113,6 +120,7 @@ func BuildRotatePassphrase() app.RotatePassphraseUc {
 		getVaultRepository(),
 		getEncryptionService(),
 		getHashService(),
+		int(config.DefaultSaltSize),
 	)
 }
 

@@ -18,7 +18,7 @@ func TestListEntriesUseCase_Execute_Success(t *testing.T) {
 	vaultService := &test.MockVaultService{
 		OpenFunc: func(vctx *model.VaultContext) (*model.Vault, error) {
 			savedVault, _ := model.NewVault(envTest, fingerprintTest, saltTest)
-			savedVault.SetPassphrase(passphraseTest)
+			_ = test.SetPassphraseForTest(savedVault, passphraseTest)
 			savedVault.SetEntry(key1, base64.StdEncoding.EncodeToString([]byte(valueTest)))
 			savedVault.SetEntry(key2, base64.StdEncoding.EncodeToString([]byte(valueTest)))
 			return savedVault, nil

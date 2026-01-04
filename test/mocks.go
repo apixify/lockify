@@ -54,7 +54,7 @@ func (m *MockVaultService) Open(vctx *model.VaultContext) (*model.Vault, error) 
 		return m.OpenFunc(vctx)
 	}
 	vault, _ := model.NewVault(vctx.Env, "test-fingerprint", "test-salt")
-	vault.SetPassphrase("test-passphrase")
+	_ = SetPassphraseForTest(vault, "test-passphrase")
 	return vault, nil
 }
 
@@ -273,6 +273,13 @@ func (m *MockHashService) GenerateSalt(size int) (string, error) {
 		return m.GenerateSaltFunc(size)
 	}
 	return "test-salt", nil
+}
+
+// SetPassphraseForTest is a test helper that sets a passphrase on a vault without validation.
+// It uses a MockHashService that always succeeds verification.
+func SetPassphraseForTest(vault *model.Vault, passphrase string) error {
+	hashService := &MockHashService{} // Verify always returns nil by default
+	return vault.SetPassphrase(passphrase, hashService)
 }
 
 // MockPassphraseService mocks the PassphraseService for testing.

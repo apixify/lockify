@@ -27,10 +27,5 @@ func (useCase *ListEntriesUseCase) Execute(vctx *model.VaultContext) ([]string, 
 		return nil, err
 	}
 
-	keys := make([]string, 0, len(vault.Entries))
-	for k := range vault.Entries {
-		keys = append(keys, k)
-	}
-
-	return keys, nil
+	return vault.ListKeys(), nil
 }

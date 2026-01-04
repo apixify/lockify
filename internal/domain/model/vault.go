@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"time"
+
+	"github.com/ahmed-abdelgawad92/lockify/internal/domain/contract"
 )
 
 // Vault represents an encrypted vault containing entries for an environment.
@@ -53,9 +55,20 @@ func (v *Vault) Passphrase() string {
 	return v.passphrase
 }
 
-// SetPassphrase sets the vault passphrase
-func (v *Vault) SetPassphrase(passphrase string) {
+// SetPassphrase validates the passphrase against the fingerprint and sets it if valid.
+// This ensures the passphrase matches the vault's fingerprint before allowing access.
+func (v *Vault) SetPassphrase(passphrase string, hashService contract.HashService) error {
+	if passphrase == "" {
+		return errors.New("passphrase cannot be empty")
+	}
+	if v.Meta.FingerPrint == "" {
+		return errors.New("vault fingerprint is not set")
+	}
+	if err := hashService.Verify(v.Meta.FingerPrint, passphrase); err != nil {
+		return fmt.Errorf("passphrase does not match vault fingerprint: %w", err)
+	}
 	v.passphrase = passphrase
+	return nil
 }
 
 // GetEntry retrieves an entry by key
@@ -93,9 +106,6 @@ func (v *Vault) SetEntry(key, encryptedValue string) error {
 		}
 	}
 
-	if v.Entries == nil {
-		v.Entries = make(map[string]Entry)
-	}
 	v.Entries[key] = entry
 	return nil
 }
@@ -119,4 +129,75 @@ func (v *Vault) ListKeys() []string {
 		keys = append(keys, k)
 	}
 	return keys
+}
+
+// ForEachEntry iterates over all entries in the vault, calling fn for each entry.
+// This provides controlled access to entries without exposing the internal map.
+func (v *Vault) ForEachEntry(fn func(key string, entry Entry) error) error {
+	for key, entry := range v.Entries {
+		if err := fn(key, entry); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// RotatePassphrase rotates the vault's passphrase by re-encrypting all entries
+// with the new passphrase and updating the vault's metadata.
+func (v *Vault) RotatePassphrase(
+	currentPassphrase, newPassphrase string,
+	encryptionService contract.EncryptionService,
+	hashService contract.HashService,
+	saltSize int,
+) error {
+	if currentPassphrase == "" {
+		return errors.New("current passphrase cannot be empty")
+	}
+	if newPassphrase == "" {
+		return errors.New("new passphrase cannot be empty")
+	}
+	if err := v.SetPassphrase(currentPassphrase, hashService); err != nil {
+		return fmt.Errorf("invalid current passphrase: %w", err)
+	}
+
+	newSalt, err := hashService.GenerateSalt(saltSize)
+	if err != nil {
+		return fmt.Errorf("failed to generate salt: %w", err)
+	}
+
+	currentSalt := v.Meta.Salt
+	for key, entry := range v.Entries {
+		decryptedValue, err := encryptionService.Decrypt(
+			entry.Value,
+			currentSalt,
+			currentPassphrase,
+		)
+		if err != nil {
+			return fmt.Errorf("failed to decrypt entry %q: %w", key, err)
+		}
+
+		encryptedValue, err := encryptionService.Encrypt(
+			decryptedValue,
+			newSalt,
+			newPassphrase,
+		)
+		if err != nil {
+			return fmt.Errorf("failed to encrypt entry %q: %w", key, err)
+		}
+
+		entry.Value = encryptedValue
+		entry.UpdatedAt = time.Now().UTC().Format(time.RFC3339)
+		v.Entries[key] = entry
+	}
+
+	newFingerprint, err := hashService.Hash(newPassphrase)
+	if err != nil {
+		return fmt.Errorf("failed to hash new passphrase: %w", err)
+	}
+
+	v.Meta.Salt = newSalt
+	v.Meta.FingerPrint = newFingerprint
+	v.passphrase = newPassphrase
+
+	return nil
 }

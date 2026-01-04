@@ -24,7 +24,7 @@ func createVaultServiceWithMocks(
 	passphrase *test.MockPassphraseService,
 	hash *test.MockHashService,
 ) VaultServiceInterface {
-	return NewVaultService(repo, passphrase, hash)
+	return NewVaultService(repo, passphrase, hash, 16) // Default salt size for tests
 }
 
 // ============================================================================
@@ -300,15 +300,20 @@ func TestOpen_InvalidPassphrase(t *testing.T) {
 		},
 	}
 	passphrase := &test.MockPassphraseService{
-		ValidateFunc: func(vctx *model.VaultContext, vault *model.Vault, passphrase string) error {
-			return errors.New("invalid passphrase")
+		GetFunc: func(vctx *model.VaultContext) (string, error) {
+			return "wrong-passphrase", nil
 		},
 		ClearFunc: func(vctx *model.VaultContext) error {
 			clearCalled = true
 			return nil
 		},
 	}
-	vaultService := createVaultServiceWithMocks(repo, passphrase, &test.MockHashService{})
+	hashService := &test.MockHashService{
+		VerifyFunc: func(hashedPassphrase, passphrase string) error {
+			return errors.New("invalid passphrase")
+		},
+	}
+	vaultService := createVaultServiceWithMocks(repo, passphrase, hashService)
 
 	_, err := vaultService.Open(model.NewVaultContext(context.Background(), "test", false))
 	if err == nil {

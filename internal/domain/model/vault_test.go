@@ -245,7 +245,11 @@ func TestSetEntryWithEmptyValue(t *testing.T) {
 func TestSetPassphrase(t *testing.T) {
 	vault := createTestVault(t)
 
-	vault.SetPassphrase(testPassphrase)
+	// Use SetPassphrase with a mock hash service that always succeeds
+	hashService := &mockHashService{}
+	if err := vault.SetPassphrase(testPassphrase, hashService); err != nil {
+		t.Fatalf("SetPassphrase() error = %v, want nil", err)
+	}
 	if vault.Passphrase() != testPassphrase {
 		t.Errorf("expected passphrase %q, got %q", testPassphrase, vault.Passphrase())
 	}
@@ -302,4 +306,19 @@ func TestNewVault_ValidationErrors(t *testing.T) {
 			}
 		})
 	}
+}
+
+// mockHashService is a simple mock for testing that always succeeds verification
+type mockHashService struct{}
+
+func (m *mockHashService) Hash(passphrase string) (string, error) {
+	return "hashed-" + passphrase, nil
+}
+
+func (m *mockHashService) Verify(hashedPassphrase, passphrase string) error {
+	return nil // Always succeeds for testing
+}
+
+func (m *mockHashService) GenerateSalt(size int) (string, error) {
+	return "test-salt", nil
 }

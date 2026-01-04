@@ -10,10 +10,11 @@ import (
 
 // PassphraseService implements service.PassphraseService
 type PassphraseService struct {
-	cache      service.Cache
-	cryptoUtil service.HashService
-	prompt     service.PromptService
-	envVar     string
+	cache               service.Cache
+	cryptoUtil          service.HashService
+	prompt              service.PromptService
+	environmentProvider service.EnvironmentProvider
+	envVar              string
 }
 
 // NewPassphraseService creates a new passphrase service
@@ -21,13 +22,20 @@ func NewPassphraseService(
 	cache service.Cache,
 	cryptoUtil service.HashService,
 	prompt service.PromptService,
+	environmentProvider service.EnvironmentProvider,
 	envVar string,
 ) service.PassphraseService {
 	if envVar == "" {
 		envVar = "LOCKIFY_PASSPHRASE"
 	}
 
-	return &PassphraseService{cache, cryptoUtil, prompt, envVar}
+	return &PassphraseService{
+		cache:               cache,
+		cryptoUtil:          cryptoUtil,
+		prompt:              prompt,
+		environmentProvider: environmentProvider,
+		envVar:              envVar,
+	}
 }
 
 // Get retrieves a passphrase from environment variable, keyring cache, or user input
@@ -36,7 +44,7 @@ func (s *PassphraseService) Get(vctx *model.VaultContext) (string, error) {
 		return "", fmt.Errorf("environment cannot be empty")
 	}
 
-	if passphrase := os.Getenv(s.envVar); passphrase != "" {
+	if passphrase := s.environmentProvider.GetPassphrase(s.envVar); passphrase != "" {
 		return passphrase, nil
 	}
 

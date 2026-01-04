@@ -42,29 +42,37 @@ func (useCase *ExportEnvUseCase) Execute(
 	}
 
 	if exportFormat.IsDotEnv() {
-		for k, v := range vault.Entries {
+		err := vault.ForEachEntry(func(key string, entry model.Entry) error {
 			decryptedVal, err := useCase.encryptionService.Decrypt(
-				v.Value,
+				entry.Value,
 				vault.Meta.Salt,
 				vault.Passphrase(),
 			)
 			if err != nil {
-				return fmt.Errorf("failed to decrypt value: %v", err)
+				return fmt.Errorf("failed to decrypt value for key %q: %w", key, err)
 			}
-			useCase.logger.Output("%s=%s\n", k, decryptedVal)
+			useCase.logger.Output("%s=%s\n", key, decryptedVal)
+			return nil
+		})
+		if err != nil {
+			return err
 		}
 	} else {
 		mappedEntries := make(map[string]string)
-		for k, v := range vault.Entries {
+		err := vault.ForEachEntry(func(key string, entry model.Entry) error {
 			decryptedVal, err := useCase.encryptionService.Decrypt(
-				v.Value,
+				entry.Value,
 				vault.Meta.Salt,
 				vault.Passphrase(),
 			)
 			if err != nil {
-				return fmt.Errorf("failed to decrypt value: %v", err)
+				return fmt.Errorf("failed to decrypt value for key %q: %w", key, err)
 			}
-			mappedEntries[k] = string(decryptedVal)
+			mappedEntries[key] = string(decryptedVal)
+			return nil
+		})
+		if err != nil {
+			return err
 		}
 
 		data, err := json.MarshalIndent(mappedEntries, "", "  ")

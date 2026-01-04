@@ -23,14 +23,14 @@ const (
 
 func TestAddEntryUseCase_Execute_Success(t *testing.T) {
 	testVault, _ := model.NewVault(envTest, fingerprintTest, saltTest)
-	testVault.SetPassphrase(passphraseTest)
+	_ = test.SetPassphraseForTest(testVault, passphraseTest)
 
 	var savedVault *model.Vault
 
 	vaultService := &test.MockVaultService{
 		OpenFunc: func(vctx *model.VaultContext) (*model.Vault, error) {
 			vault, _ := model.NewVault(vctx.Env, fingerprintTest, saltTest)
-			vault.SetPassphrase(passphraseTest)
+			_ = test.SetPassphraseForTest(vault, passphraseTest)
 			return vault, nil
 		},
 		SaveFunc: func(vctx *model.VaultContext, vault *model.Vault) error {

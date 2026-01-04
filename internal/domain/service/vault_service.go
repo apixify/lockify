@@ -3,7 +3,6 @@ package service
 import (
 	"fmt"
 
-	"github.com/ahmed-abdelgawad92/lockify/internal/config"
 	"github.com/ahmed-abdelgawad92/lockify/internal/domain/model"
 	"github.com/ahmed-abdelgawad92/lockify/internal/domain/repository"
 )
@@ -20,6 +19,7 @@ type VaultService struct {
 	vaultRepo         repository.VaultRepository
 	passphraseService PassphraseService
 	hashService       HashService
+	saltSize          int
 }
 
 // NewVaultService creates a new VaultService instance.
@@ -27,8 +27,14 @@ func NewVaultService(
 	vaultRepo repository.VaultRepository,
 	passphraseService PassphraseService,
 	hashService HashService,
+	saltSize int,
 ) *VaultService {
-	return &VaultService{vaultRepo, passphraseService, hashService}
+	return &VaultService{
+		vaultRepo:         vaultRepo,
+		passphraseService: passphraseService,
+		hashService:       hashService,
+		saltSize:          saltSize,
+	}
 }
 
 // Create creates a new vault for the specified environment with cache preference.
@@ -51,7 +57,7 @@ func (vs *VaultService) Create(vctx *model.VaultContext) (*model.Vault, error) {
 		return nil, fmt.Errorf("failed to hash passphrase: %w", err)
 	}
 
-	salt, err := vs.hashService.GenerateSalt(config.DefaultSaltSize)
+	salt, err := vs.hashService.GenerateSalt(vs.saltSize)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate salt: %w", err)
 	}
@@ -84,14 +90,13 @@ func (vs *VaultService) Open(vctx *model.VaultContext) (*model.Vault, error) {
 		return nil, fmt.Errorf("failed to open vault for environment %s: %w", vctx.Env, err)
 	}
 
-	if err = vs.passphraseService.Validate(vctx, vault, passphrase); err != nil {
+	// Validate and set passphrase in one call
+	if err := vault.SetPassphrase(passphrase, vs.hashService); err != nil {
 		if err = vs.passphraseService.Clear(vctx); err != nil {
 			return nil, fmt.Errorf("failed to clear passphrase: %w", err)
 		}
 		return nil, fmt.Errorf("invalid credentials: %w", err)
 	}
-
-	vault.SetPassphrase(passphrase)
 
 	return vault, nil
 }
