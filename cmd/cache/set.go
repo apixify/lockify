@@ -6,6 +6,7 @@ import (
 	"github.com/ahmed-abdelgawad92/lockify/internal/app"
 	"github.com/ahmed-abdelgawad92/lockify/internal/cli"
 	"github.com/ahmed-abdelgawad92/lockify/internal/domain"
+	"github.com/ahmed-abdelgawad92/lockify/internal/domain/model"
 	"github.com/ahmed-abdelgawad92/lockify/internal/domain/service"
 	"github.com/spf13/cobra"
 )
@@ -69,8 +70,14 @@ func (c *SetCommand) runE(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("passphrase cannot be empty")
 	}
 
-	ctx := c.cmdCtx.GetContext()
-	err = c.useCase.Execute(ctx, env, passphrase)
+	shouldCache, err := c.cmdCtx.GetCacheFlag(cmd)
+	if err != nil {
+		c.logger.Error("failed to get cache flag: %w", err)
+		return err
+	}
+
+	vctx := model.NewVaultContext(c.cmdCtx.GetContext(), env, shouldCache)
+	err = c.useCase.Execute(vctx, passphrase)
 	if err != nil {
 		c.logger.Error("failed to cache passphrase: %v", err)
 		return err

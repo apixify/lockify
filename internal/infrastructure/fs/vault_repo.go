@@ -1,7 +1,6 @@
 package fs
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -28,7 +27,7 @@ func NewFileVaultRepository(
 }
 
 // Create creates a new vault file
-func (repo *FileVaultRepository) Create(ctx context.Context, vault *model.Vault) error {
+func (repo *FileVaultRepository) Create(vctx *model.VaultContext, vault *model.Vault) error {
 	if vault == nil {
 		return fmt.Errorf("vault cannot be nil")
 	}
@@ -40,7 +39,7 @@ func (repo *FileVaultRepository) Create(ctx context.Context, vault *model.Vault)
 		return fmt.Errorf("failed to create vault directory: %w", err)
 	}
 
-	exists, err := repo.Exists(ctx, vault.Meta.Env)
+	exists, err := repo.Exists(vctx)
 	if err != nil {
 		return fmt.Errorf("failed to check vault existence: %w", err)
 	}
@@ -48,21 +47,21 @@ func (repo *FileVaultRepository) Create(ctx context.Context, vault *model.Vault)
 		return fmt.Errorf("vault already exists for environment %q", vault.Meta.Env)
 	}
 
-	return repo.Save(ctx, vault)
+	return repo.Save(vctx, vault)
 }
 
 // Load loads a vault from the filesystem
-func (repo *FileVaultRepository) Load(ctx context.Context, env string) (*model.Vault, error) {
-	if env == "" {
+func (repo *FileVaultRepository) Load(vctx *model.VaultContext) (*model.Vault, error) {
+	if vctx.Env == "" {
 		return nil, fmt.Errorf("environment cannot be empty")
 	}
 
-	vaultPath := repo.cfg.GetVaultPath(env)
+	vaultPath := repo.cfg.GetVaultPath(vctx.Env)
 
 	data, err := repo.fs.ReadFile(vaultPath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil, fmt.Errorf("vault not found for environment %q: %w", env, err)
+			return nil, fmt.Errorf("vault not found for environment %q: %w", vctx.Env, err)
 		}
 		return nil, fmt.Errorf("failed to read vault file: %w", err)
 	}
@@ -74,10 +73,10 @@ func (repo *FileVaultRepository) Load(ctx context.Context, env string) (*model.V
 
 	vault.SetPath(vaultPath)
 
-	if vault.Meta.Env != env {
+	if vault.Meta.Env != vctx.Env {
 		return nil, fmt.Errorf(
 			"vault environment mismatch: expected %q, got %q",
-			env,
+			vctx.Env,
 			vault.Meta.Env,
 		)
 	}
@@ -86,7 +85,7 @@ func (repo *FileVaultRepository) Load(ctx context.Context, env string) (*model.V
 }
 
 // Save saves a vault to the filesystem
-func (repo *FileVaultRepository) Save(ctx context.Context, vault *model.Vault) error {
+func (repo *FileVaultRepository) Save(vctx *model.VaultContext, vault *model.Vault) error {
 	if vault == nil {
 		return fmt.Errorf("vault cannot be nil")
 	}
@@ -118,12 +117,12 @@ func (repo *FileVaultRepository) Save(ctx context.Context, vault *model.Vault) e
 }
 
 // Exists checks if a vault exists for an environment
-func (repo *FileVaultRepository) Exists(ctx context.Context, env string) (bool, error) {
-	if env == "" {
+func (repo *FileVaultRepository) Exists(vctx *model.VaultContext) (bool, error) {
+	if vctx.Env == "" {
 		return false, fmt.Errorf("environment cannot be empty")
 	}
 
-	vaultPath := repo.cfg.GetVaultPath(env)
+	vaultPath := repo.cfg.GetVaultPath(vctx.Env)
 	_, err := repo.fs.Stat(vaultPath)
 	if err != nil {
 		if os.IsNotExist(err) {

@@ -6,6 +6,7 @@ import (
 	"github.com/ahmed-abdelgawad92/lockify/internal/app"
 	"github.com/ahmed-abdelgawad92/lockify/internal/cli"
 	"github.com/ahmed-abdelgawad92/lockify/internal/domain"
+	"github.com/ahmed-abdelgawad92/lockify/internal/domain/model"
 	"github.com/spf13/cobra"
 )
 
@@ -60,7 +61,7 @@ func (c *ClearCommand) runE(cmd *cobra.Command, args []string) error {
 	if env != "" {
 		// Clear specific environment
 		c.logger.Progress("Clearing cached passphrase for environment %q", env)
-		err := c.clearEnvCachedPassphraseUc.Execute(ctx, env)
+		err := c.clearEnvCachedPassphraseUc.Execute(model.NewVaultContext(ctx, env, false))
 		if err != nil {
 			c.logger.Error("failed to clear cached passphrase: %v", err)
 			return err
@@ -69,7 +70,7 @@ func (c *ClearCommand) runE(cmd *cobra.Command, args []string) error {
 	} else {
 		// Clear all
 		c.logger.Progress("Clearing all cached passphrases")
-		err := c.clearCachedPassphraseUc.Execute(ctx)
+		err := c.clearCachedPassphraseUc.Execute(model.NewVaultContext(ctx, env, false))
 		if err != nil {
 			c.logger.Error("failed to clear cached passphrases: %v", err)
 			return err

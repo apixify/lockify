@@ -7,14 +7,15 @@ import (
 	"testing"
 
 	"github.com/ahmed-abdelgawad92/lockify/internal/domain/model"
+	"github.com/ahmed-abdelgawad92/lockify/internal/domain/model/value"
 	"github.com/ahmed-abdelgawad92/lockify/test"
 	"github.com/ahmed-abdelgawad92/lockify/test/assert"
 )
 
 func TestExportEnvUseCase_Execute_Json(t *testing.T) {
 	vaultService := &test.MockVaultService{
-		OpenFunc: func(ctx context.Context, env string) (*model.Vault, error) {
-			vault, _ := model.NewVault(envTest, fingerprintTest, saltTest)
+		OpenFunc: func(vctx *model.VaultContext) (*model.Vault, error) {
+			vault, _ := model.NewVault(vctx.Env, fingerprintTest, saltTest)
 			vault.SetPassphrase(passphraseTest)
 			vault.SetEntry(keyTest, valueTest)
 			return vault, nil
@@ -29,7 +30,7 @@ func TestExportEnvUseCase_Execute_Json(t *testing.T) {
 
 	useCase := NewExportEnvUseCase(vaultService, encryptionService, loggerService)
 
-	useCase.Execute(context.Background(), envTest, "json")
+	useCase.Execute(model.NewVaultContext(context.Background(), envTest, false), "json")
 
 	var got map[string]string
 	json.Unmarshal([]byte(loggerService.OutputLogs[0]), &got)
@@ -43,8 +44,8 @@ func TestExportEnvUseCase_Execute_Json(t *testing.T) {
 
 func TestExportEnvUseCase_Execute_Dotenv(t *testing.T) {
 	vaultService := &test.MockVaultService{
-		OpenFunc: func(ctx context.Context, env string) (*model.Vault, error) {
-			vault, _ := model.NewVault(envTest, fingerprintTest, saltTest)
+		OpenFunc: func(vctx *model.VaultContext) (*model.Vault, error) {
+			vault, _ := model.NewVault(vctx.Env, fingerprintTest, saltTest)
 			vault.SetPassphrase(passphraseTest)
 			vault.SetEntry(keyTest, valueTest)
 			return vault, nil
@@ -59,7 +60,10 @@ func TestExportEnvUseCase_Execute_Dotenv(t *testing.T) {
 
 	useCase := NewExportEnvUseCase(vaultService, encryptionService, loggerService)
 
-	useCase.Execute(context.Background(), envTest, "dotenv")
+	useCase.Execute(
+		model.NewVaultContext(context.Background(), envTest, false),
+		value.DotEnv,
+	)
 
 	want := fmt.Sprintf("%s=%s\n", keyTest, valueTest)
 	got := loggerService.OutputLogs[0]

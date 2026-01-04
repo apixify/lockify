@@ -2,7 +2,6 @@ package vault
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"testing"
 
@@ -13,18 +12,14 @@ import (
 )
 
 type mockInitUseCase struct {
-	executeFunc func(ctx context.Context, env string, shouldCache bool) (*model.Vault, error)
+	executeFunc func(vctx *model.VaultContext) (*model.Vault, error)
 }
 
-func (m *mockInitUseCase) Execute(
-	ctx context.Context,
-	env string,
-	shouldCache bool,
-) (*model.Vault, error) {
+func (m *mockInitUseCase) Execute(vctx *model.VaultContext) (*model.Vault, error) {
 	if m.executeFunc != nil {
-		return m.executeFunc(ctx, env, shouldCache)
+		return m.executeFunc(vctx)
 	}
-	vault, _ := model.NewVault(env, "finger", "salt")
+	vault, _ := model.NewVault(vctx.Env, "finger", "salt")
 	vault.SetPath("/tmp/test.vault")
 	return vault, nil
 }
@@ -35,6 +30,7 @@ func TestInitCommand_Success(t *testing.T) {
 	cmdCtx := cli.NewCommandContext()
 
 	cmd, _ := NewInitCommand(mockUseCase, mockLogger, cmdCtx)
+	cmd.Flags().Bool("cache", false, "Cache passphrase")
 	if err := cmd.Flags().Set("env", "test"); err != nil {
 		t.Fatalf("failed to set env flag: %v", err)
 	}
@@ -54,7 +50,7 @@ func TestInitCommand_Success(t *testing.T) {
 func TestInitCommand_Failed(t *testing.T) {
 	errMsg := "error during execution"
 	mockUseCase := &mockInitUseCase{
-		executeFunc: func(ctx context.Context, env string, shouldCache bool) (*model.Vault, error) {
+		executeFunc: func(vctx *model.VaultContext) (*model.Vault, error) {
 			return nil, fmt.Errorf("%s", errMsg)
 		},
 	}
@@ -62,6 +58,7 @@ func TestInitCommand_Failed(t *testing.T) {
 	cmdCtx := cli.NewCommandContext()
 
 	cmd, _ := NewInitCommand(mockUseCase, mockLogger, cmdCtx)
+	cmd.Flags().Bool("cache", false, "Cache passphrase")
 	if err := cmd.Flags().Set("env", "test"); err != nil {
 		t.Fatalf("failed to set env flag: %v", err)
 	}

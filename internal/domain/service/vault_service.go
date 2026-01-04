@@ -1,7 +1,6 @@
 package service
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/ahmed-abdelgawad92/lockify/internal/config"
@@ -11,9 +10,9 @@ import (
 
 // VaultServiceInterface defines the interface for vault operations.
 type VaultServiceInterface interface {
-	Open(ctx context.Context, env string) (*model.Vault, error)
-	Save(ctx context.Context, vault *model.Vault) error
-	Create(ctx context.Context, env string, shouldCache bool) (*model.Vault, error)
+	Open(vctx *model.VaultContext) (*model.Vault, error)
+	Save(vctx *model.VaultContext, vault *model.Vault) error
+	Create(vctx *model.VaultContext) (*model.Vault, error)
 }
 
 // VaultService implements vault operations including create, open, and save.
@@ -33,20 +32,16 @@ func NewVaultService(
 }
 
 // Create creates a new vault for the specified environment with cache preference.
-func (vs *VaultService) Create(
-	ctx context.Context,
-	env string,
-	shouldCache bool,
-) (*model.Vault, error) {
-	exists, err := vs.vaultRepo.Exists(ctx, env)
+func (vs *VaultService) Create(vctx *model.VaultContext) (*model.Vault, error) {
+	exists, err := vs.vaultRepo.Exists(vctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to check vault existence: %w", err)
 	}
 	if exists {
-		return nil, fmt.Errorf("vault already exists for environment %q", env)
+		return nil, fmt.Errorf("vault already exists for environment %q", vctx.Env)
 	}
 
-	passphrase, err := vs.passphraseService.GetWithConfirmation(ctx, env, shouldCache)
+	passphrase, err := vs.passphraseService.GetWithConfirmation(vctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get passphrase: %w", err)
 	}
@@ -61,12 +56,12 @@ func (vs *VaultService) Create(
 		return nil, fmt.Errorf("failed to generate salt: %w", err)
 	}
 
-	vault, err := model.NewVault(env, fingerprint, salt)
+	vault, err := model.NewVault(vctx.Env, fingerprint, salt)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create vault: %w", err)
 	}
 
-	if err := vs.vaultRepo.Create(ctx, vault); err != nil {
+	if err := vs.vaultRepo.Create(vctx, vault); err != nil {
 		return nil, fmt.Errorf("failed to save vault: %w", err)
 	}
 
@@ -74,23 +69,23 @@ func (vs *VaultService) Create(
 }
 
 // Open opens an existing vault for the specified environment.
-func (vs *VaultService) Open(ctx context.Context, env string) (*model.Vault, error) {
-	if exists, err := vs.vaultRepo.Exists(ctx, env); !exists || err != nil {
-		return nil, fmt.Errorf("vault for env %s does not exist %w", env, err)
+func (vs *VaultService) Open(vctx *model.VaultContext) (*model.Vault, error) {
+	if exists, err := vs.vaultRepo.Exists(vctx); !exists || err != nil {
+		return nil, fmt.Errorf("vault for env %s does not exist %w", vctx.Env, err)
 	}
 
-	passphrase, err := vs.passphraseService.Get(ctx, env)
+	passphrase, err := vs.passphraseService.Get(vctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to retrieve passphrase: %w", err)
 	}
 
-	vault, err := vs.vaultRepo.Load(ctx, env)
+	vault, err := vs.vaultRepo.Load(vctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to open vault for environment %s: %w", env, err)
+		return nil, fmt.Errorf("failed to open vault for environment %s: %w", vctx.Env, err)
 	}
 
-	if err = vs.passphraseService.Validate(ctx, vault, passphrase); err != nil {
-		if err = vs.passphraseService.Clear(ctx, env); err != nil {
+	if err = vs.passphraseService.Validate(vctx, vault, passphrase); err != nil {
+		if err = vs.passphraseService.Clear(vctx); err != nil {
 			return nil, fmt.Errorf("failed to clear passphrase: %w", err)
 		}
 		return nil, fmt.Errorf("invalid credentials: %w", err)
@@ -102,6 +97,6 @@ func (vs *VaultService) Open(ctx context.Context, env string) (*model.Vault, err
 }
 
 // Save saves the vault to persistent storage.
-func (vs *VaultService) Save(ctx context.Context, vault *model.Vault) error {
-	return vs.vaultRepo.Save(ctx, vault)
+func (vs *VaultService) Save(vctx *model.VaultContext, vault *model.Vault) error {
+	return vs.vaultRepo.Save(vctx, vault)
 }

@@ -2,31 +2,31 @@ package key
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"testing"
 
 	"github.com/ahmed-abdelgawad92/lockify/internal/cli"
+	"github.com/ahmed-abdelgawad92/lockify/internal/domain/model"
 	"github.com/ahmed-abdelgawad92/lockify/test"
 	"github.com/ahmed-abdelgawad92/lockify/test/assert"
 )
 
 type mockRotateUseCase struct {
-	executeFunc               func(ctx context.Context, env, currentPassphrase, newPassphrase string) error
+	executeFunc               func(vctx *model.VaultContext, currentPassphrase, newPassphrase string) error
 	receivedEnv               string
 	receivedCurrentPassphrase string
 	receivedNewPassphrase     string
 }
 
 func (m *mockRotateUseCase) Execute(
-	ctx context.Context,
-	env, currentPassphrase, newPassphrase string,
+	vctx *model.VaultContext,
+	currentPassphrase, newPassphrase string,
 ) error {
-	m.receivedEnv = env
+	m.receivedEnv = vctx.Env
 	m.receivedCurrentPassphrase = currentPassphrase
 	m.receivedNewPassphrase = newPassphrase
 	if m.executeFunc != nil {
-		return m.executeFunc(ctx, env, currentPassphrase, newPassphrase)
+		return m.executeFunc(vctx, currentPassphrase, newPassphrase)
 	}
 	return nil
 }
@@ -44,6 +44,7 @@ func TestRotateCommand_Success(t *testing.T) {
 	}
 
 	cmd, _ := NewRotateCommand(mockUseCase, mockPrompt, mockLogger, cli.NewCommandContext())
+	cmd.Flags().Bool("cache", false, "Cache passphrase")
 	if err := cmd.Flags().Set("env", "test"); err != nil {
 		t.Fatalf("failed to set env flag: %v", err)
 	}
@@ -98,7 +99,7 @@ func TestRotateCommand_Error_Empty_Env(t *testing.T) {
 
 func TestRotateCommand_UseCaseError(t *testing.T) {
 	mockUseCase := &mockRotateUseCase{
-		executeFunc: func(ctx context.Context, env, currentPassphrase, newPassphrase string) error {
+		executeFunc: func(vctx *model.VaultContext, currentPassphrase, newPassphrase string) error {
 			return fmt.Errorf("%s", test.ErrMsgExecuteFailed)
 		},
 	}
@@ -113,6 +114,7 @@ func TestRotateCommand_UseCaseError(t *testing.T) {
 	}
 
 	cmd, _ := NewRotateCommand(mockUseCase, mockPrompt, mockLogger, cli.NewCommandContext())
+	cmd.Flags().Bool("cache", false, "Cache passphrase")
 	if err := cmd.Flags().Set("env", "test"); err != nil {
 		t.Fatalf("failed to set env flag: %v", err)
 	}

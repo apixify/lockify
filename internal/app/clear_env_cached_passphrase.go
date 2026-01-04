@@ -1,8 +1,7 @@
 package app
 
 import (
-	"context"
-
+	"github.com/ahmed-abdelgawad92/lockify/internal/domain/model"
 	"github.com/ahmed-abdelgawad92/lockify/internal/domain/service"
 )
 
@@ -19,6 +18,6 @@ func NewClearEnvCachedPassphraseUseCase(
 }
 
 // Execute clears the cached passphrase for the specified environment.
-func (useCase *ClearEnvCachedPassphraseUseCase) Execute(ctx context.Context, env string) error {
-	return useCase.passphraseService.Clear(ctx, env)
+func (useCase *ClearEnvCachedPassphraseUseCase) Execute(vctx *model.VaultContext) error {
+	return useCase.passphraseService.Clear(vctx)
 }

@@ -1,17 +1,17 @@
 package app
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/ahmed-abdelgawad92/lockify/internal/config"
+	"github.com/ahmed-abdelgawad92/lockify/internal/domain/model"
 	"github.com/ahmed-abdelgawad92/lockify/internal/domain/repository"
 	"github.com/ahmed-abdelgawad92/lockify/internal/domain/service"
 )
 
 // RotatePassphraseUc defines the interface for rotating vault passphrases.
 type RotatePassphraseUc interface {
-	Execute(ctx context.Context, env, currentPassphrase, newPassphrase string) error
+	Execute(vctx *model.VaultContext, currentPassphrase, newPassphrase string) error
 }
 
 // RotatePassphraseUseCase implements the use case for rotating vault passphrases.
@@ -32,12 +32,12 @@ func NewRotatePassphraseUseCase(
 
 // Execute rotates the passphrase for a vault by re-encrypting all entries with the new passphrase.
 func (useCase *RotatePassphraseUseCase) Execute(
-	ctx context.Context,
-	env, currentPassphrase, newPassphrase string,
+	vctx *model.VaultContext,
+	currentPassphrase, newPassphrase string,
 ) error {
-	vault, err := useCase.vaultRepo.Load(ctx, env)
+	vault, err := useCase.vaultRepo.Load(vctx)
 	if err != nil {
-		return fmt.Errorf("failed to open vault for environment %s: %w", env, err)
+		return fmt.Errorf("failed to open vault for environment %s: %w", vctx.Env, err)
 	}
 
 	if err = useCase.hashService.Verify(vault.Meta.FingerPrint, currentPassphrase); err != nil {
@@ -80,5 +80,5 @@ func (useCase *RotatePassphraseUseCase) Execute(
 		vault.Entries[key] = entry
 	}
 
-	return useCase.vaultRepo.Save(ctx, vault)
+	return useCase.vaultRepo.Save(vctx, vault)
 }

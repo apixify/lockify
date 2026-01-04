@@ -2,26 +2,26 @@ package vault
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"testing"
 
 	"github.com/ahmed-abdelgawad92/lockify/internal/cli"
+	"github.com/ahmed-abdelgawad92/lockify/internal/domain/model"
 	"github.com/ahmed-abdelgawad92/lockify/test"
 	"github.com/ahmed-abdelgawad92/lockify/test/assert"
 )
 
 type mockDeleteUseCase struct {
-	executeFunc func(ctx context.Context, env, key string) error
+	executeFunc func(vctx *model.VaultContext, key string) error
 	receivedEnv string
 	receivedKey string
 }
 
-func (m *mockDeleteUseCase) Execute(ctx context.Context, env, key string) error {
-	m.receivedEnv = env
+func (m *mockDeleteUseCase) Execute(vctx *model.VaultContext, key string) error {
+	m.receivedEnv = vctx.Env
 	m.receivedKey = key
 	if m.executeFunc != nil {
-		return m.executeFunc(ctx, env, key)
+		return m.executeFunc(vctx, key)
 	}
 	return nil
 }
@@ -31,6 +31,7 @@ func TestDeleteCommand_Success(t *testing.T) {
 	mockLogger := &test.MockLogger{}
 
 	cmd, _ := NewDeleteCommand(mockUseCase, mockLogger, cli.NewCommandContext())
+	cmd.Flags().Bool("cache", false, "Cache passphrase")
 	if err := cmd.Flags().Set("env", "test"); err != nil {
 		t.Fatalf("failed to set env flag: %v", err)
 	}
@@ -53,13 +54,14 @@ func TestDeleteCommand_Success(t *testing.T) {
 
 func TestDeleteCommand_UseCaseError(t *testing.T) {
 	mockUseCase := &mockDeleteUseCase{
-		executeFunc: func(ctx context.Context, env, key string) error {
+		executeFunc: func(vctx *model.VaultContext, key string) error {
 			return fmt.Errorf("%s", test.ErrMsgExecuteFailed)
 		},
 	}
 	mockLogger := &test.MockLogger{}
 
 	cmd, _ := NewDeleteCommand(mockUseCase, mockLogger, cli.NewCommandContext())
+	cmd.Flags().Bool("cache", false, "Cache passphrase")
 	if err := cmd.Flags().Set("env", "test"); err != nil {
 		t.Fatalf("failed to set env flag: %v", err)
 	}

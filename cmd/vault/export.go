@@ -6,6 +6,7 @@ import (
 	"github.com/ahmed-abdelgawad92/lockify/internal/app"
 	"github.com/ahmed-abdelgawad92/lockify/internal/cli"
 	"github.com/ahmed-abdelgawad92/lockify/internal/domain"
+	"github.com/ahmed-abdelgawad92/lockify/internal/domain/model"
 	"github.com/ahmed-abdelgawad92/lockify/internal/domain/model/value"
 	"github.com/spf13/cobra"
 )
@@ -68,8 +69,14 @@ func (c *ExportCommand) runE(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	c.logger.Progress("Exporting entries for environment %s...\n", env)
-	ctx := c.cmdCtx.GetContext()
-	err = c.useCase.Execute(ctx, env, expotFormat)
+	shouldCache, err := c.cmdCtx.GetCacheFlag(cmd)
+	if err != nil {
+		c.logger.Error("failed to get cache flag: %w", err)
+		return err
+	}
+
+	vctx := model.NewVaultContext(c.cmdCtx.GetContext(), env, shouldCache)
+	err = c.useCase.Execute(vctx, expotFormat)
 	if err != nil {
 		return fmt.Errorf("failed to export entries for environment %s: %w", env, err)
 	}

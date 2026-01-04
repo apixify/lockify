@@ -2,11 +2,11 @@ package cache
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"testing"
 
 	"github.com/ahmed-abdelgawad92/lockify/internal/cli"
+	"github.com/ahmed-abdelgawad92/lockify/internal/domain/model"
 	"github.com/ahmed-abdelgawad92/lockify/test"
 	"github.com/ahmed-abdelgawad92/lockify/test/assert"
 )
@@ -14,12 +14,12 @@ import (
 const testPassphrase = "test_passphrase"
 
 type mockCachePassphraseUseCase struct {
-	executeFunc func(ctx context.Context, env, passphrase string) error
+	executeFunc func(vctx *model.VaultContext, passphrase string) error
 }
 
-func (m *mockCachePassphraseUseCase) Execute(ctx context.Context, env, passphrase string) error {
+func (m *mockCachePassphraseUseCase) Execute(vctx *model.VaultContext, passphrase string) error {
 	if m.executeFunc != nil {
-		return m.executeFunc(ctx, env, passphrase)
+		return m.executeFunc(vctx, passphrase)
 	}
 	return nil
 }
@@ -38,6 +38,7 @@ func TestSetCommand_Success(t *testing.T) {
 		t.Fatalf("NewSetCommand returned error: %v", err)
 	}
 
+	cmd.Flags().Bool("cache", false, "Cache passphrase")
 	if err := cmd.Flags().Set("env", "test"); err != nil {
 		t.Fatalf("failed to set env flag: %v", err)
 	}
@@ -114,6 +115,7 @@ func TestSetCommand_Error_PromptFailed(t *testing.T) {
 		t.Fatalf("NewSetCommand returned error: %v", err)
 	}
 
+	cmd.Flags().Bool("cache", false, "Cache passphrase")
 	if err := cmd.Flags().Set("env", "test"); err != nil {
 		t.Fatalf("failed to set env flag: %v", err)
 	}
@@ -143,6 +145,7 @@ func TestSetCommand_Error_EmptyPassphrase(t *testing.T) {
 		t.Fatalf("NewSetCommand returned error: %v", err)
 	}
 
+	cmd.Flags().Bool("cache", false, "Cache passphrase")
 	if err := cmd.Flags().Set("env", "test"); err != nil {
 		t.Fatalf("failed to set env flag: %v", err)
 	}
@@ -161,7 +164,7 @@ func TestSetCommand_Error_EmptyPassphrase(t *testing.T) {
 func TestSetCommand_UseCaseError(t *testing.T) {
 	expectedError := "cache failed"
 	mockUseCase := &mockCachePassphraseUseCase{
-		executeFunc: func(ctx context.Context, env, passphrase string) error {
+		executeFunc: func(vctx *model.VaultContext, passphrase string) error {
 			return fmt.Errorf("%s", expectedError)
 		},
 	}
@@ -177,6 +180,7 @@ func TestSetCommand_UseCaseError(t *testing.T) {
 		t.Fatalf("NewSetCommand returned error: %v", err)
 	}
 
+	cmd.Flags().Bool("cache", false, "Cache passphrase")
 	if err := cmd.Flags().Set("env", "test"); err != nil {
 		t.Fatalf("failed to set env flag: %v", err)
 	}
@@ -212,6 +216,7 @@ func TestSetCommand_VerifiesPassphraseMessage(t *testing.T) {
 		t.Fatalf("NewSetCommand returned error: %v", err)
 	}
 
+	cmd.Flags().Bool("cache", false, "Cache passphrase")
 	if err := cmd.Flags().Set("env", env); err != nil {
 		t.Fatalf("failed to set env flag: %v", err)
 	}
@@ -235,8 +240,8 @@ func TestSetCommand_PassesCorrectDataToUseCase(t *testing.T) {
 
 	var receivedEnv, receivedPassphrase string
 	mockUseCase := &mockCachePassphraseUseCase{
-		executeFunc: func(ctx context.Context, env, passphrase string) error {
-			receivedEnv = env
+		executeFunc: func(vctx *model.VaultContext, passphrase string) error {
+			receivedEnv = vctx.Env
 			receivedPassphrase = passphrase
 			return nil
 		},
@@ -253,6 +258,7 @@ func TestSetCommand_PassesCorrectDataToUseCase(t *testing.T) {
 		t.Fatalf("NewSetCommand returned error: %v", err)
 	}
 
+	cmd.Flags().Bool("cache", false, "Cache passphrase")
 	if err := cmd.Flags().Set("env", expectedEnv); err != nil {
 		t.Fatalf("failed to set env flag: %v", err)
 	}

@@ -1,14 +1,13 @@
 package app
 
 import (
-	"context"
-
+	"github.com/ahmed-abdelgawad92/lockify/internal/domain/model"
 	"github.com/ahmed-abdelgawad92/lockify/internal/domain/service"
 )
 
 // GetEntryUc defines the interface for retrieving entries from the vault.
 type GetEntryUc interface {
-	Execute(ctx context.Context, env, key string) (string, error)
+	Execute(vctx *model.VaultContext, key string) (string, error)
 }
 
 // GetEntryUseCase implements the use case for retrieving entries from the vault.
@@ -26,8 +25,8 @@ func NewGetEntryUseCase(
 }
 
 // Execute retrieves and decrypts an entry from the vault.
-func (useCase *GetEntryUseCase) Execute(ctx context.Context, env, key string) (string, error) {
-	vault, err := useCase.vaultService.Open(ctx, env)
+func (useCase *GetEntryUseCase) Execute(vctx *model.VaultContext, key string) (string, error) {
+	vault, err := useCase.vaultService.Open(vctx)
 	if err != nil {
 		return "", err
 	}

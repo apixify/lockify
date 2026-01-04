@@ -1,7 +1,6 @@
 package test
 
 import (
-	"context"
 	"fmt"
 	"io"
 
@@ -44,39 +43,37 @@ func (m *MockPromptService) GetConfirmation(message string, defaultValue bool) (
 
 // MockVaultService mocks the VaultService for testing.
 type MockVaultService struct {
-	OpenFunc   func(ctx context.Context, env string) (*model.Vault, error)
-	SaveFunc   func(ctx context.Context, vault *model.Vault) error
-	CreateFunc func(ctx context.Context, env string, shouldCache bool) (*model.Vault, error)
+	OpenFunc   func(vctx *model.VaultContext) (*model.Vault, error)
+	SaveFunc   func(vctx *model.VaultContext, vault *model.Vault) error
+	CreateFunc func(vctx *model.VaultContext) (*model.Vault, error)
 }
 
 // Open mocks the Open method.
-func (m *MockVaultService) Open(ctx context.Context, env string) (*model.Vault, error) {
+func (m *MockVaultService) Open(vctx *model.VaultContext) (*model.Vault, error) {
 	if m.OpenFunc != nil {
-		return m.OpenFunc(ctx, env)
+		return m.OpenFunc(vctx)
 	}
-	vault, _ := model.NewVault(env, "test-fingerprint", "test-salt")
+	vault, _ := model.NewVault(vctx.Env, "test-fingerprint", "test-salt")
 	vault.SetPassphrase("test-passphrase")
 	return vault, nil
 }
 
 // Save mocks the Save method.
-func (m *MockVaultService) Save(ctx context.Context, vault *model.Vault) error {
+func (m *MockVaultService) Save(vctx *model.VaultContext, vault *model.Vault) error {
 	if m.SaveFunc != nil {
-		return m.SaveFunc(ctx, vault)
+		return m.SaveFunc(vctx, vault)
 	}
 	return nil
 }
 
 // Create mocks the Create method.
 func (m *MockVaultService) Create(
-	ctx context.Context,
-	env string,
-	shouldCache bool,
+	vctx *model.VaultContext,
 ) (*model.Vault, error) {
 	if m.CreateFunc != nil {
-		return m.CreateFunc(ctx, env, shouldCache)
+		return m.CreateFunc(vctx)
 	}
-	vault, _ := model.NewVault(env, "test-fingerprint", "test-salt")
+	vault, _ := model.NewVault(vctx.Env, "test-fingerprint", "test-salt")
 	return vault, nil
 }
 
@@ -208,41 +205,41 @@ func (m *MockImportService) FromDotEnv(r io.Reader) (map[string]string, error) {
 
 // MockVaultRepository mocks the VaultRepository for testing.
 type MockVaultRepository struct {
-	CreateFunc func(ctx context.Context, vault *model.Vault) error
-	LoadFunc   func(ctx context.Context, env string) (*model.Vault, error)
-	SaveFunc   func(ctx context.Context, vault *model.Vault) error
-	ExistsFunc func(ctx context.Context, env string) (bool, error)
+	CreateFunc func(vctx *model.VaultContext, vault *model.Vault) error
+	LoadFunc   func(vctx *model.VaultContext) (*model.Vault, error)
+	SaveFunc   func(vctx *model.VaultContext, vault *model.Vault) error
+	ExistsFunc func(vctx *model.VaultContext) (bool, error)
 }
 
 // Create mocks the Create method.
-func (m *MockVaultRepository) Create(ctx context.Context, vault *model.Vault) error {
+func (m *MockVaultRepository) Create(vctx *model.VaultContext, vault *model.Vault) error {
 	if m.CreateFunc != nil {
-		return m.CreateFunc(ctx, vault)
+		return m.CreateFunc(vctx, vault)
 	}
 	return nil
 }
 
 // Load mocks the Load method.
-func (m *MockVaultRepository) Load(ctx context.Context, env string) (*model.Vault, error) {
+func (m *MockVaultRepository) Load(vctx *model.VaultContext) (*model.Vault, error) {
 	if m.LoadFunc != nil {
-		return m.LoadFunc(ctx, env)
+		return m.LoadFunc(vctx)
 	}
-	vault, _ := model.NewVault(env, "test-fingerprint", "test-salt")
+	vault, _ := model.NewVault(vctx.Env, "test-fingerprint", "test-salt")
 	return vault, nil
 }
 
 // Save mocks the Save method.
-func (m *MockVaultRepository) Save(ctx context.Context, vault *model.Vault) error {
+func (m *MockVaultRepository) Save(vctx *model.VaultContext, vault *model.Vault) error {
 	if m.SaveFunc != nil {
-		return m.SaveFunc(ctx, vault)
+		return m.SaveFunc(vctx, vault)
 	}
 	return nil
 }
 
 // Exists mocks the Exists method.
-func (m *MockVaultRepository) Exists(ctx context.Context, env string) (bool, error) {
+func (m *MockVaultRepository) Exists(vctx *model.VaultContext) (bool, error) {
 	if m.ExistsFunc != nil {
-		return m.ExistsFunc(ctx, env)
+		return m.ExistsFunc(vctx)
 	}
 	return false, nil
 }
@@ -280,66 +277,62 @@ func (m *MockHashService) GenerateSalt(size int) (string, error) {
 
 // MockPassphraseService mocks the PassphraseService for testing.
 type MockPassphraseService struct {
-	GetFunc                 func(ctx context.Context, env string) (string, error)
-	GetWithConfirmationFunc func(ctx context.Context, env string, shouldCache bool) (string, error)
-	CacheFunc               func(ctx context.Context, env string, passphrase string) error
-	ClearFunc               func(ctx context.Context, env string) error
-	ClearAllFunc            func(ctx context.Context) error
-	ValidateFunc            func(ctx context.Context, vault *model.Vault, passphrase string) error
+	GetFunc                 func(vctx *model.VaultContext) (string, error)
+	GetWithConfirmationFunc func(vctx *model.VaultContext) (string, error)
+	CacheFunc               func(vctx *model.VaultContext, passphrase string) error
+	ClearFunc               func(vctx *model.VaultContext) error
+	ClearAllFunc            func(vctx *model.VaultContext) error
+	ValidateFunc            func(vctx *model.VaultContext, vault *model.Vault, passphrase string) error
 }
 
 // Get mocks the Get method.
-func (m *MockPassphraseService) Get(ctx context.Context, env string) (string, error) {
+func (m *MockPassphraseService) Get(vctx *model.VaultContext) (string, error) {
 	if m.GetFunc != nil {
-		return m.GetFunc(ctx, env)
+		return m.GetFunc(vctx)
 	}
 	return "test-passphrase", nil
 }
 
 // GetWithConfirmation mocks the GetWithConfirmation method.
-func (m *MockPassphraseService) GetWithConfirmation(
-	ctx context.Context,
-	env string,
-	shouldCache bool,
-) (string, error) {
+func (m *MockPassphraseService) GetWithConfirmation(vctx *model.VaultContext) (string, error) {
 	if m.GetWithConfirmationFunc != nil {
-		return m.GetWithConfirmationFunc(ctx, env, shouldCache)
+		return m.GetWithConfirmationFunc(vctx)
 	}
 	return "test-passphrase", nil
 }
 
 // Cache mocks the Cache method.
-func (m *MockPassphraseService) Cache(ctx context.Context, env, passphrase string) error {
+func (m *MockPassphraseService) Cache(vctx *model.VaultContext, passphrase string) error {
 	if m.CacheFunc != nil {
-		return m.CacheFunc(ctx, env, passphrase)
+		return m.CacheFunc(vctx, passphrase)
 	}
 	return nil
 }
 
 // Clear mocks the Clear method.
-func (m *MockPassphraseService) Clear(ctx context.Context, env string) error {
+func (m *MockPassphraseService) Clear(vctx *model.VaultContext) error {
 	if m.ClearFunc != nil {
-		return m.ClearFunc(ctx, env)
+		return m.ClearFunc(vctx)
 	}
 	return nil
 }
 
 // ClearAll mocks the ClearAll method.
-func (m *MockPassphraseService) ClearAll(ctx context.Context) error {
+func (m *MockPassphraseService) ClearAll(vctx *model.VaultContext) error {
 	if m.ClearAllFunc != nil {
-		return m.ClearAllFunc(ctx)
+		return m.ClearAllFunc(vctx)
 	}
 	return nil
 }
 
 // Validate mocks the Validate method.
 func (m *MockPassphraseService) Validate(
-	ctx context.Context,
+	vctx *model.VaultContext,
 	vault *model.Vault,
 	passphrase string,
 ) error {
 	if m.ValidateFunc != nil {
-		return m.ValidateFunc(ctx, vault, passphrase)
+		return m.ValidateFunc(vctx, vault, passphrase)
 	}
 	return nil
 }

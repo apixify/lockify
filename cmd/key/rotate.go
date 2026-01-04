@@ -7,6 +7,7 @@ import (
 	"github.com/ahmed-abdelgawad92/lockify/internal/cli"
 	"github.com/ahmed-abdelgawad92/lockify/internal/di"
 	"github.com/ahmed-abdelgawad92/lockify/internal/domain"
+	"github.com/ahmed-abdelgawad92/lockify/internal/domain/model"
 	"github.com/ahmed-abdelgawad92/lockify/internal/domain/service"
 	"github.com/spf13/cobra"
 )
@@ -65,16 +66,22 @@ func (c *RotateCommand) runE(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	shouldCache, err := c.cmdCtx.GetCacheFlag(cmd)
+	if err != nil {
+		c.logger.Error("failed to get cache flag: %w", err)
+		return err
+	}
+
 	c.logger.Progress("Rotating passphrase for %s...\n", env)
-	ctx := c.cmdCtx.GetContext()
-	err = c.useCase.Execute(ctx, env, passphrase, newPassphrase)
+	vctx := model.NewVaultContext(c.cmdCtx.GetContext(), env, shouldCache)
+	err = c.useCase.Execute(vctx, passphrase, newPassphrase)
 	if err != nil {
 		c.logger.Error("failed to rotate passphrase: %w", err)
 		return err
 	}
 
 	clearCacheUseCase := di.BuildClearEnvCachedPassphrase()
-	err = clearCacheUseCase.Execute(ctx, env)
+	err = clearCacheUseCase.Execute(vctx)
 	if err != nil {
 		c.logger.Error("failed to clear cached passphrase: %w", err)
 	}

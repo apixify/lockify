@@ -2,25 +2,25 @@ package cache
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"testing"
 
 	"github.com/ahmed-abdelgawad92/lockify/internal/app"
 	"github.com/ahmed-abdelgawad92/lockify/internal/cli"
+	"github.com/ahmed-abdelgawad92/lockify/internal/domain/model"
 	"github.com/ahmed-abdelgawad92/lockify/test"
 	"github.com/ahmed-abdelgawad92/lockify/test/assert"
 )
 
 type mockClearUseCase struct {
-	executeFunc func(ctx context.Context) error
+	executeFunc func(vctx *model.VaultContext) error
 	executed    bool
 }
 
-func (m *mockClearUseCase) Execute(ctx context.Context) error {
+func (m *mockClearUseCase) Execute(vctx *model.VaultContext) error {
 	m.executed = true
 	if m.executeFunc != nil {
-		return m.executeFunc(ctx)
+		return m.executeFunc(vctx)
 	}
 	return nil
 }
@@ -51,7 +51,7 @@ func TestClearCommand_Success(t *testing.T) {
 
 func TestClearCommand_UseCaseError(t *testing.T) {
 	mockClearUseCase := &mockClearUseCase{
-		executeFunc: func(ctx context.Context) error {
+		executeFunc: func(vctx *model.VaultContext) error {
 			return fmt.Errorf("%s", test.ErrMsgExecuteFailed)
 		},
 	}

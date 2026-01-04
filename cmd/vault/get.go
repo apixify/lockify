@@ -6,6 +6,7 @@ import (
 	"github.com/ahmed-abdelgawad92/lockify/internal/app"
 	"github.com/ahmed-abdelgawad92/lockify/internal/cli"
 	"github.com/ahmed-abdelgawad92/lockify/internal/domain"
+	"github.com/ahmed-abdelgawad92/lockify/internal/domain/model"
 	"github.com/spf13/cobra"
 )
 
@@ -62,8 +63,14 @@ func (c *GetCommand) runE(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	ctx := c.cmdCtx.GetContext()
-	value, err := c.useCase.Execute(ctx, env, key)
+	shouldCache, err := c.cmdCtx.GetCacheFlag(cmd)
+	if err != nil {
+		c.logger.Error("failed to get cache flag: %w", err)
+		return err
+	}
+
+	vctx := model.NewVaultContext(c.cmdCtx.GetContext(), env, shouldCache)
+	value, err := c.useCase.Execute(vctx, key)
 	if err != nil {
 		c.logger.Error(err.Error())
 		return err

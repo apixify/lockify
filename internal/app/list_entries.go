@@ -1,14 +1,13 @@
 package app
 
 import (
-	"context"
-
+	"github.com/ahmed-abdelgawad92/lockify/internal/domain/model"
 	"github.com/ahmed-abdelgawad92/lockify/internal/domain/service"
 )
 
 // ListEntriesUc defines the interface for listing entries in the vault.
 type ListEntriesUc interface {
-	Execute(ctx context.Context, env string) ([]string, error)
+	Execute(vctx *model.VaultContext) ([]string, error)
 }
 
 // ListEntriesUseCase implements the use case for listing entries in the vault.
@@ -22,8 +21,8 @@ func NewListEntriesUseCase(vaultService service.VaultServiceInterface) ListEntri
 }
 
 // Execute lists all entry keys in the vault for the specified environment.
-func (useCase *ListEntriesUseCase) Execute(ctx context.Context, env string) ([]string, error) {
-	vault, err := useCase.vaultService.Open(ctx, env)
+func (useCase *ListEntriesUseCase) Execute(vctx *model.VaultContext) ([]string, error) {
+	vault, err := useCase.vaultService.Open(vctx)
 	if err != nil {
 		return nil, err
 	}

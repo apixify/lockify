@@ -6,6 +6,7 @@ import (
 	"github.com/ahmed-abdelgawad92/lockify/internal/app"
 	"github.com/ahmed-abdelgawad92/lockify/internal/cli"
 	"github.com/ahmed-abdelgawad92/lockify/internal/domain"
+	"github.com/ahmed-abdelgawad92/lockify/internal/domain/model"
 	"github.com/spf13/cobra"
 )
 
@@ -53,18 +54,15 @@ func (c *InitCommand) runE(cobraCmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	// Get cache flag if it exists (from root command's persistent flags)
-	shouldCache := false
-	if cobraCmd.Flags().Lookup("cache") != nil {
-		shouldCache, err = c.cmdCtx.GetCacheFlag(cobraCmd)
-		if err != nil {
-			return err
-		}
+	shouldCache, err := c.cmdCtx.GetCacheFlag(cobraCmd)
+	if err != nil {
+		c.logger.Error("failed to get cache flag: %w", err)
+		return err
 	}
 
 	c.logger.Progress("Initializing Lockify vault")
-	ctx := c.cmdCtx.GetContext()
-	vault, err := c.useCase.Execute(ctx, env, shouldCache)
+	vctx := model.NewVaultContext(c.cmdCtx.GetContext(), env, shouldCache)
+	vault, err := c.useCase.Execute(vctx)
 	if err != nil {
 		return err
 	}

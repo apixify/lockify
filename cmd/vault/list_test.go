@@ -2,24 +2,24 @@ package vault
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"testing"
 
 	"github.com/ahmed-abdelgawad92/lockify/internal/cli"
+	"github.com/ahmed-abdelgawad92/lockify/internal/domain/model"
 	"github.com/ahmed-abdelgawad92/lockify/test"
 	"github.com/ahmed-abdelgawad92/lockify/test/assert"
 )
 
 type mockListUseCase struct {
-	executeFunc func(ctx context.Context, env string) ([]string, error)
+	executeFunc func(vctx *model.VaultContext) ([]string, error)
 	receivedEnv string
 }
 
-func (m *mockListUseCase) Execute(ctx context.Context, env string) ([]string, error) {
-	m.receivedEnv = env
+func (m *mockListUseCase) Execute(vctx *model.VaultContext) ([]string, error) {
+	m.receivedEnv = vctx.Env
 	if m.executeFunc != nil {
-		return m.executeFunc(ctx, env)
+		return m.executeFunc(vctx)
 	}
 	return []string{"key1", "key2", "key3"}, nil
 }
@@ -29,6 +29,7 @@ func TestListCommand_Success(t *testing.T) {
 	mockLogger := &test.MockLogger{}
 
 	cmd, _ := NewListCommand(mockUseCase, mockLogger, cli.NewCommandContext())
+	cmd.Flags().Bool("cache", false, "Cache passphrase")
 	if err := cmd.Flags().Set("env", "test"); err != nil {
 		t.Fatalf("failed to set env flag: %v", err)
 	}
@@ -50,13 +51,14 @@ func TestListCommand_Success(t *testing.T) {
 
 func TestListCommand_EmptyKeys(t *testing.T) {
 	mockUseCase := &mockListUseCase{
-		executeFunc: func(ctx context.Context, env string) ([]string, error) {
+		executeFunc: func(vctx *model.VaultContext) ([]string, error) {
 			return []string{}, nil
 		},
 	}
 	mockLogger := &test.MockLogger{}
 
 	cmd, _ := NewListCommand(mockUseCase, mockLogger, cli.NewCommandContext())
+	cmd.Flags().Bool("cache", false, "Cache passphrase")
 	if err := cmd.Flags().Set("env", "test"); err != nil {
 		t.Fatalf("failed to set env flag: %v", err)
 	}
@@ -75,13 +77,14 @@ func TestListCommand_EmptyKeys(t *testing.T) {
 
 func TestListCommand_UseCaseError(t *testing.T) {
 	mockUseCase := &mockListUseCase{
-		executeFunc: func(ctx context.Context, env string) ([]string, error) {
+		executeFunc: func(vctx *model.VaultContext) ([]string, error) {
 			return nil, fmt.Errorf("%s", test.ErrMsgExecuteFailed)
 		},
 	}
 	mockLogger := &test.MockLogger{}
 
 	cmd, _ := NewListCommand(mockUseCase, mockLogger, cli.NewCommandContext())
+	cmd.Flags().Bool("cache", false, "Cache passphrase")
 	if err := cmd.Flags().Set("env", "test"); err != nil {
 		t.Fatalf("failed to set env flag: %v", err)
 	}

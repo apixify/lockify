@@ -28,12 +28,12 @@ func TestAddEntryUseCase_Execute_Success(t *testing.T) {
 	var savedVault *model.Vault
 
 	vaultService := &test.MockVaultService{
-		OpenFunc: func(ctx context.Context, env string) (*model.Vault, error) {
-			vault, _ := model.NewVault(env, fingerprintTest, saltTest)
+		OpenFunc: func(vctx *model.VaultContext) (*model.Vault, error) {
+			vault, _ := model.NewVault(vctx.Env, fingerprintTest, saltTest)
 			vault.SetPassphrase(passphraseTest)
 			return vault, nil
 		},
-		SaveFunc: func(ctx context.Context, vault *model.Vault) error {
+		SaveFunc: func(vctx *model.VaultContext, vault *model.Vault) error {
 			savedVault = vault
 			return nil
 		},
@@ -60,7 +60,7 @@ func TestAddEntryUseCase_Execute_Success(t *testing.T) {
 
 	useCase := NewAddEntryUseCase(vaultService, encryptionService)
 
-	err := useCase.Execute(context.Background(), AddEntryDTO{
+	err := useCase.Execute(model.NewVaultContext(context.Background(), envTest, false), AddEntryDTO{
 		Env:   envTest,
 		Key:   keyTest,
 		Value: valueTest,
@@ -97,13 +97,13 @@ func TestAddEntryUseCase_Execute_Success(t *testing.T) {
 
 func TestAddEntryUseCase_Execute_VaultOpenError(t *testing.T) {
 	vaultService := &test.MockVaultService{
-		OpenFunc: func(ctx context.Context, env string) (*model.Vault, error) {
+		OpenFunc: func(vctx *model.VaultContext) (*model.Vault, error) {
 			return nil, errors.New("open vault error")
 		},
 	}
 
 	useCase := NewAddEntryUseCase(vaultService, &test.MockEncryptionService{})
-	err := useCase.Execute(context.Background(), AddEntryDTO{
+	err := useCase.Execute(model.NewVaultContext(context.Background(), envTest, false), AddEntryDTO{
 		Env:   envTest,
 		Key:   keyTest,
 		Value: valueTest,
@@ -120,7 +120,7 @@ func TestAddEntryUseCase_Execute_EncryptionError(t *testing.T) {
 		},
 	}
 	useCase := NewAddEntryUseCase(&test.MockVaultService{}, encryptionService)
-	err := useCase.Execute(context.Background(), AddEntryDTO{
+	err := useCase.Execute(model.NewVaultContext(context.Background(), envTest, false), AddEntryDTO{
 		Env:   envTest,
 		Key:   keyTest,
 		Value: valueTest,
@@ -137,12 +137,12 @@ func TestAddEntryUseCase_Execute_EncryptionError(t *testing.T) {
 
 func TestAddEntryUseCase_Execute_SaveError(t *testing.T) {
 	useCase := NewAddEntryUseCase(&test.MockVaultService{
-		SaveFunc: func(ctx context.Context, vault *model.Vault) error {
+		SaveFunc: func(vctx *model.VaultContext, vault *model.Vault) error {
 			return errors.New("save failed")
 		},
 	}, &test.MockEncryptionService{})
 
-	err := useCase.Execute(context.Background(), AddEntryDTO{
+	err := useCase.Execute(model.NewVaultContext(context.Background(), envTest, false), AddEntryDTO{
 		Env:   envTest,
 		Key:   keyTest,
 		Value: valueTest,

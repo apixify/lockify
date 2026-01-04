@@ -2,24 +2,24 @@ package vault
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"testing"
 
 	"github.com/ahmed-abdelgawad92/lockify/internal/cli"
+	"github.com/ahmed-abdelgawad92/lockify/internal/domain/model"
 	"github.com/ahmed-abdelgawad92/lockify/test"
 	"github.com/ahmed-abdelgawad92/lockify/test/assert"
 )
 
 type mockGetUseCase struct {
-	executeFunc func(ctx context.Context, env, key string) (string, error)
+	executeFunc func(vctx *model.VaultContext, key string) (string, error)
 	recievedKey string
 }
 
-func (m *mockGetUseCase) Execute(ctx context.Context, env, key string) (string, error) {
+func (m *mockGetUseCase) Execute(vctx *model.VaultContext, key string) (string, error) {
 	m.recievedKey = key
 	if m.executeFunc != nil {
-		return m.executeFunc(ctx, env, key)
+		return m.executeFunc(vctx, key)
 	}
 
 	return "test_value", nil
@@ -29,6 +29,7 @@ func TestGetCommand_Success(t *testing.T) {
 	mockUseCase := &mockGetUseCase{}
 	mockLogger := &test.MockLogger{}
 	cmd, _ := NewGetCommand(mockUseCase, mockLogger, cli.NewCommandContext())
+	cmd.Flags().Bool("cache", false, "Cache passphrase")
 	if err := cmd.Flags().Set("env", "test"); err != nil {
 		t.Fatalf("failed to set env flag: %v", err)
 	}
@@ -52,13 +53,14 @@ func TestGetCommand_Success(t *testing.T) {
 
 func TestGetCommand_UseCaseError(t *testing.T) {
 	mockUseCase := &mockGetUseCase{
-		executeFunc: func(ctx context.Context, env, key string) (string, error) {
+		executeFunc: func(vctx *model.VaultContext, key string) (string, error) {
 			return "", fmt.Errorf("%s", test.ErrMsgExecuteFailed)
 		},
 	}
 	mockLogger := &test.MockLogger{}
 
 	cmd, _ := NewGetCommand(mockUseCase, mockLogger, cli.NewCommandContext())
+	cmd.Flags().Bool("cache", false, "Cache passphrase")
 
 	if err := cmd.Flags().Set("env", "test"); err != nil {
 		t.Fatalf("failed to set env flag: %v", err)

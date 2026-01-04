@@ -7,6 +7,7 @@ import (
 	"github.com/ahmed-abdelgawad92/lockify/internal/app"
 	"github.com/ahmed-abdelgawad92/lockify/internal/cli"
 	"github.com/ahmed-abdelgawad92/lockify/internal/domain"
+	"github.com/ahmed-abdelgawad92/lockify/internal/domain/model"
 	"github.com/ahmed-abdelgawad92/lockify/internal/domain/model/value"
 	"github.com/spf13/cobra"
 )
@@ -93,8 +94,14 @@ func (c *ImportCommand) runE(cmd *cobra.Command, args []string) error {
 	}
 
 	c.logger.Progress("Importing variables from %s...", filename)
-	ctx := c.cmdCtx.GetContext()
-	imported, skipped, err := c.useCase.Execute(ctx, env, fileFormat, file, overwrite)
+	shouldCache, err := c.cmdCtx.GetCacheFlag(cmd)
+	if err != nil {
+		c.logger.Error("failed to get cache flag: %w", err)
+		return err
+	}
+
+	vctx := model.NewVaultContext(c.cmdCtx.GetContext(), env, shouldCache)
+	imported, skipped, err := c.useCase.Execute(vctx, fileFormat, file, overwrite)
 	if err != nil {
 		return fmt.Errorf("failed to import env variables: %w", err)
 	}

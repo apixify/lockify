@@ -13,7 +13,7 @@ import (
 
 func TestGetEntryUseCase_Execute_Success(t *testing.T) {
 	vaultService := &test.MockVaultService{
-		OpenFunc: func(ctx context.Context, env string) (*model.Vault, error) {
+		OpenFunc: func(vctx *model.VaultContext) (*model.Vault, error) {
 			savedVault, _ := model.NewVault(envTest, fingerprintTest, saltTest)
 			savedVault.SetPassphrase(passphraseTest)
 			savedVault.SetEntry(keyTest, base64.StdEncoding.EncodeToString([]byte(valueTest)))
@@ -30,7 +30,10 @@ func TestGetEntryUseCase_Execute_Success(t *testing.T) {
 
 	useCase := NewGetEntryUseCase(vaultService, encryptionService)
 
-	valueRetrieved, err := useCase.Execute(context.Background(), envTest, keyTest)
+	valueRetrieved, err := useCase.Execute(
+		model.NewVaultContext(context.Background(), envTest, false),
+		keyTest,
+	)
 	assert.Nil(t, err, fmt.Sprintf("Execute() returned unexpected error: %v", err))
 	assert.Equal(
 		t,
@@ -42,7 +45,7 @@ func TestGetEntryUseCase_Execute_Success(t *testing.T) {
 
 func TestGetEntryUseCase_Execute_EntryNotFound(t *testing.T) {
 	vaultService := &test.MockVaultService{
-		OpenFunc: func(ctx context.Context, env string) (*model.Vault, error) {
+		OpenFunc: func(vctx *model.VaultContext) (*model.Vault, error) {
 			savedVault, _ := model.NewVault(envTest, fingerprintTest, saltTest)
 			savedVault.SetPassphrase(passphraseTest)
 			return savedVault, nil
@@ -58,7 +61,7 @@ func TestGetEntryUseCase_Execute_EntryNotFound(t *testing.T) {
 
 	useCase := NewGetEntryUseCase(vaultService, encryptionService)
 
-	_, err := useCase.Execute(context.Background(), envTest, keyTest)
+	_, err := useCase.Execute(model.NewVaultContext(context.Background(), envTest, false), keyTest)
 	assert.NotNil(t, err, "Execute() should return non-existence error, got nil")
 	assert.Contains(
 		t,

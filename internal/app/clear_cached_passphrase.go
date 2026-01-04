@@ -1,14 +1,13 @@
 package app
 
 import (
-	"context"
-
+	"github.com/ahmed-abdelgawad92/lockify/internal/domain/model"
 	"github.com/ahmed-abdelgawad92/lockify/internal/domain/service"
 )
 
 // ClearCachedPassphraseUc defines the interface for clearing all cached passphrases.
 type ClearCachedPassphraseUc interface {
-	Execute(context.Context) error
+	Execute(vctx *model.VaultContext) error
 }
 
 // ClearCachedPassphraseUseCase implements the use case for clearing all cached passphrases.
@@ -24,6 +23,6 @@ func NewClearCachedPassphraseUseCase(
 }
 
 // Execute clears all cached passphrases from the system keyring.
-func (useCase *ClearCachedPassphraseUseCase) Execute(ctx context.Context) error {
-	return useCase.passphraseService.ClearAll(ctx)
+func (useCase *ClearCachedPassphraseUseCase) Execute(vctx *model.VaultContext) error {
+	return useCase.passphraseService.ClearAll(vctx)
 }
