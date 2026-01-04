@@ -1,15 +1,15 @@
 package app
 
 import (
-	"context"
 	"fmt"
 
+	"github.com/ahmed-abdelgawad92/lockify/internal/domain/model"
 	"github.com/ahmed-abdelgawad92/lockify/internal/domain/service"
 )
 
 // DeleteEntryUc defines the interface for deleting entries from the vault.
 type DeleteEntryUc interface {
-	Execute(ctx context.Context, env, key string) error
+	Execute(vctx *model.VaultContext, key string) error
 }
 
 // DeleteEntryUseCase implements the use case for deleting entries from the vault.
@@ -23,8 +23,8 @@ func NewDeleteEntryUseCase(vaultService service.VaultServiceInterface) DeleteEnt
 }
 
 // Execute deletes an entry from the vault for the specified environment and key.
-func (useCase *DeleteEntryUseCase) Execute(ctx context.Context, env, key string) error {
-	vault, err := useCase.vaultService.Open(ctx, env)
+func (useCase *DeleteEntryUseCase) Execute(vctx *model.VaultContext, key string) error {
+	vault, err := useCase.vaultService.Open(vctx)
 	if err != nil {
 		return err
 	}
@@ -33,5 +33,5 @@ func (useCase *DeleteEntryUseCase) Execute(ctx context.Context, env, key string)
 		return fmt.Errorf("failed to delete key %s: %w", key, err)
 	}
 
-	return useCase.vaultService.Save(ctx, vault)
+	return useCase.vaultService.Save(vctx, vault)
 }

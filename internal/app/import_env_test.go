@@ -20,12 +20,12 @@ func TestImportEnvUseCase_Execute_Json(t *testing.T) {
 
 	var savedVault *model.Vault
 	vaultService := &test.MockVaultService{
-		OpenFunc: func(ctx context.Context, env string) (*model.Vault, error) {
+		OpenFunc: func(vctx *model.VaultContext) (*model.Vault, error) {
 			vault, _ := model.NewVault(envTest, fingerprintTest, saltTest)
-			vault.SetPassphrase(passphraseTest)
+			_ = test.SetPassphraseForTest(vault, passphraseTest)
 			return vault, nil
 		},
-		SaveFunc: func(ctx context.Context, vault *model.Vault) error {
+		SaveFunc: func(vctx *model.VaultContext, vault *model.Vault) error {
 			savedVault = vault
 			return nil
 		},
@@ -51,8 +51,7 @@ func TestImportEnvUseCase_Execute_Json(t *testing.T) {
 	reader := strings.NewReader(jsonInput)
 
 	imported, skipped, err := useCase.Execute(
-		context.Background(),
-		envTest,
+		model.NewVaultContext(context.Background(), envTest, false),
 		value.JSON,
 		reader,
 		false,
@@ -90,12 +89,12 @@ func TestImportEnvUseCase_Execute_Dotenv(t *testing.T) {
 
 	var savedVault *model.Vault
 	vaultService := &test.MockVaultService{
-		OpenFunc: func(ctx context.Context, env string) (*model.Vault, error) {
+		OpenFunc: func(vctx *model.VaultContext) (*model.Vault, error) {
 			vault, _ := model.NewVault(envTest, fingerprintTest, saltTest)
-			vault.SetPassphrase(passphraseTest)
+			_ = test.SetPassphraseForTest(vault, passphraseTest)
 			return vault, nil
 		},
-		SaveFunc: func(ctx context.Context, vault *model.Vault) error {
+		SaveFunc: func(vctx *model.VaultContext, vault *model.Vault) error {
 			savedVault = vault
 			return nil
 		},
@@ -121,8 +120,7 @@ func TestImportEnvUseCase_Execute_Dotenv(t *testing.T) {
 	reader := strings.NewReader(dotenvInput)
 
 	imported, skipped, err := useCase.Execute(
-		context.Background(),
-		envTest,
+		model.NewVaultContext(context.Background(), envTest, false),
 		value.DotEnv,
 		reader,
 		false,

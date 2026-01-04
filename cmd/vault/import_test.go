@@ -1,36 +1,36 @@
-package cmd
+package vault
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"io"
 	"testing"
 
+	"github.com/ahmed-abdelgawad92/lockify/internal/cli"
+	"github.com/ahmed-abdelgawad92/lockify/internal/domain/model"
 	"github.com/ahmed-abdelgawad92/lockify/internal/domain/model/value"
 	"github.com/ahmed-abdelgawad92/lockify/test"
 	"github.com/ahmed-abdelgawad92/lockify/test/assert"
 )
 
 type mockImportUseCase struct {
-	executeFunc       func(ctx context.Context, env string, format value.FileFormat, r io.Reader, overwrite bool) (imported, skipped int, err error)
+	executeFunc       func(vctx *model.VaultContext, format value.FileFormat, r io.Reader, overwrite bool) (imported, skipped int, err error)
 	receivedEnv       string
 	receivedFormat    value.FileFormat
 	receivedOverwrite bool
 }
 
 func (m *mockImportUseCase) Execute(
-	ctx context.Context,
-	env string,
+	vctx *model.VaultContext,
 	format value.FileFormat,
 	r io.Reader,
 	overwrite bool,
 ) (imported, skipped int, err error) {
-	m.receivedEnv = env
+	m.receivedEnv = vctx.Env
 	m.receivedFormat = format
 	m.receivedOverwrite = overwrite
 	if m.executeFunc != nil {
-		return m.executeFunc(ctx, env, format, r, overwrite)
+		return m.executeFunc(vctx, format, r, overwrite)
 	}
 	return 3, 1, nil
 }
@@ -39,7 +39,8 @@ func TestImportCommand_Success(t *testing.T) {
 	mockUseCase := &mockImportUseCase{}
 	mockLogger := &test.MockLogger{}
 
-	cmd, _ := NewImportCommand(mockUseCase, mockLogger)
+	cmd, _ := NewImportCommand(mockUseCase, mockLogger, cli.NewCommandContext())
+	cmd.Flags().Bool("cache", false, "Cache passphrase")
 	if err := cmd.Flags().Set("env", "test"); err != nil {
 		t.Fatalf("failed to set env flag: %v", err)
 	}
@@ -66,7 +67,8 @@ func TestImportCommand_Success_WithOverwrite(t *testing.T) {
 	mockUseCase := &mockImportUseCase{}
 	mockLogger := &test.MockLogger{}
 
-	cmd, _ := NewImportCommand(mockUseCase, mockLogger)
+	cmd, _ := NewImportCommand(mockUseCase, mockLogger, cli.NewCommandContext())
+	cmd.Flags().Bool("cache", false, "Cache passphrase")
 	if err := cmd.Flags().Set("env", "test"); err != nil {
 		t.Fatalf("failed to set env flag: %v", err)
 	}
@@ -92,13 +94,14 @@ func TestImportCommand_Success_WithOverwrite(t *testing.T) {
 
 func TestImportCommand_UseCaseError(t *testing.T) {
 	mockUseCase := &mockImportUseCase{
-		executeFunc: func(ctx context.Context, env string, format value.FileFormat, r io.Reader, overwrite bool) (imported, skipped int, err error) {
-			return 0, 0, fmt.Errorf("%s", errMsgExecuteFailed)
+		executeFunc: func(vctx *model.VaultContext, format value.FileFormat, r io.Reader, overwrite bool) (imported, skipped int, err error) {
+			return 0, 0, fmt.Errorf("%s", test.ErrMsgExecuteFailed)
 		},
 	}
 	mockLogger := &test.MockLogger{}
 
-	cmd, _ := NewImportCommand(mockUseCase, mockLogger)
+	cmd, _ := NewImportCommand(mockUseCase, mockLogger, cli.NewCommandContext())
+	cmd.Flags().Bool("cache", false, "Cache passphrase")
 	if err := cmd.Flags().Set("env", "test"); err != nil {
 		t.Fatalf("failed to set env flag: %v", err)
 	}
@@ -112,7 +115,7 @@ func TestImportCommand_UseCaseError(t *testing.T) {
 
 	err := cmd.RunE(cmd, nil)
 	assert.NotNil(t, err)
-	assert.Contains(t, errMsgExecuteFailed, err.Error())
+	assert.Contains(t, test.ErrMsgExecuteFailed, err.Error())
 	assert.Count(t, 1, mockLogger.ProgressLogs)
 	assert.Count(t, 0, mockLogger.SuccessLogs)
 }
@@ -121,7 +124,7 @@ func TestImportCommand_Error_Required_Env(t *testing.T) {
 	mockUseCase := &mockImportUseCase{}
 	mockLogger := &test.MockLogger{}
 
-	cmd, _ := NewImportCommand(mockUseCase, mockLogger)
+	cmd, _ := NewImportCommand(mockUseCase, mockLogger, cli.NewCommandContext())
 	if err := cmd.Flags().Set("format", "dotenv"); err != nil {
 		t.Fatalf("failed to set format flag: %v", err)
 	}
@@ -132,14 +135,14 @@ func TestImportCommand_Error_Required_Env(t *testing.T) {
 
 	err := cmd.RunE(cmd, nil)
 	assert.NotNil(t, err)
-	assert.Contains(t, errMsgEmptyEnv, err.Error())
+	assert.Contains(t, cli.ErrMsgEmptyEnv, err.Error())
 }
 
 func TestImportCommand_Error_Empty_Env(t *testing.T) {
 	mockUseCase := &mockImportUseCase{}
 	mockLogger := &test.MockLogger{}
 
-	cmd, _ := NewImportCommand(mockUseCase, mockLogger)
+	cmd, _ := NewImportCommand(mockUseCase, mockLogger, cli.NewCommandContext())
 	if err := cmd.Flags().Set("env", ""); err != nil {
 		t.Fatalf("failed to set env flag: %v", err)
 	}
@@ -153,14 +156,14 @@ func TestImportCommand_Error_Empty_Env(t *testing.T) {
 
 	err := cmd.RunE(cmd, nil)
 	assert.NotNil(t, err)
-	assert.Contains(t, errMsgEmptyEnv, err.Error())
+	assert.Contains(t, cli.ErrMsgEmptyEnv, err.Error())
 }
 
 func TestImportCommand_Error_Empty_Format(t *testing.T) {
 	mockUseCase := &mockImportUseCase{}
 	mockLogger := &test.MockLogger{}
 
-	cmd, _ := NewImportCommand(mockUseCase, mockLogger)
+	cmd, _ := NewImportCommand(mockUseCase, mockLogger, cli.NewCommandContext())
 	if err := cmd.Flags().Set("env", "test"); err != nil {
 		t.Fatalf("failed to set env flag: %v", err)
 	}
@@ -182,7 +185,7 @@ func TestImportCommand_Error_Invalid_Format(t *testing.T) {
 	mockUseCase := &mockImportUseCase{}
 	mockLogger := &test.MockLogger{}
 
-	cmd, _ := NewImportCommand(mockUseCase, mockLogger)
+	cmd, _ := NewImportCommand(mockUseCase, mockLogger, cli.NewCommandContext())
 	if err := cmd.Flags().Set("env", "test"); err != nil {
 		t.Fatalf("failed to set env flag: %v", err)
 	}

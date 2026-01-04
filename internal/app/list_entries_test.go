@@ -16,9 +16,9 @@ func TestListEntriesUseCase_Execute_Success(t *testing.T) {
 	key2 := "test-key-2"
 
 	vaultService := &test.MockVaultService{
-		OpenFunc: func(ctx context.Context, env string) (*model.Vault, error) {
+		OpenFunc: func(vctx *model.VaultContext) (*model.Vault, error) {
 			savedVault, _ := model.NewVault(envTest, fingerprintTest, saltTest)
-			savedVault.SetPassphrase(passphraseTest)
+			_ = test.SetPassphraseForTest(savedVault, passphraseTest)
 			savedVault.SetEntry(key1, base64.StdEncoding.EncodeToString([]byte(valueTest)))
 			savedVault.SetEntry(key2, base64.StdEncoding.EncodeToString([]byte(valueTest)))
 			return savedVault, nil
@@ -27,7 +27,7 @@ func TestListEntriesUseCase_Execute_Success(t *testing.T) {
 
 	useCase := NewListEntriesUseCase(vaultService)
 
-	allKeys, err := useCase.Execute(context.Background(), envTest)
+	allKeys, err := useCase.Execute(model.NewVaultContext(context.Background(), envTest, false))
 	assert.Nil(t, err, fmt.Sprintf("Execute() returned unexpected error: %v", err))
 	assert.Count(t, 2, allKeys, fmt.Sprintf("length of keys error, want: 2, got: %v", len(allKeys)))
 	assert.Contains(t, key1, allKeys, fmt.Sprintf("keys should contain %v", key1))

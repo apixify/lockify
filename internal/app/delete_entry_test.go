@@ -14,9 +14,9 @@ import (
 func TestDeleteEntryUseCase_Execute_Success(t *testing.T) {
 	var savedVault *model.Vault
 	vaultService := &test.MockVaultService{
-		OpenFunc: func(ctx context.Context, env string) (*model.Vault, error) {
-			savedVault, _ = model.NewVault(env, fingerprintTest, saltTest)
-			savedVault.SetPassphrase(passphraseTest)
+		OpenFunc: func(vctx *model.VaultContext) (*model.Vault, error) {
+			savedVault, _ = model.NewVault(vctx.Env, fingerprintTest, saltTest)
+			_ = test.SetPassphraseForTest(savedVault, passphraseTest)
 			savedVault.SetEntry(keyTest, base64.StdEncoding.EncodeToString([]byte(valueTest)))
 			return savedVault, nil
 		},
@@ -24,7 +24,7 @@ func TestDeleteEntryUseCase_Execute_Success(t *testing.T) {
 
 	useCase := NewDeleteEntryUseCase(vaultService)
 
-	err := useCase.Execute(context.Background(), envTest, keyTest)
+	err := useCase.Execute(model.NewVaultContext(context.Background(), envTest, false), keyTest)
 	assert.Nil(t, err, fmt.Sprintf("Execute() returned unexpected error: %v", err))
 
 	_, err = savedVault.GetEntry(keyTest)
@@ -33,16 +33,16 @@ func TestDeleteEntryUseCase_Execute_Success(t *testing.T) {
 
 func TestDeleteEntryUseCase_Execute_EntryNotFound(t *testing.T) {
 	vaultService := &test.MockVaultService{
-		OpenFunc: func(ctx context.Context, env string) (*model.Vault, error) {
-			savedVault, _ := model.NewVault(env, fingerprintTest, saltTest)
-			savedVault.SetPassphrase(passphraseTest)
+		OpenFunc: func(vctx *model.VaultContext) (*model.Vault, error) {
+			savedVault, _ := model.NewVault(vctx.Env, fingerprintTest, saltTest)
+			_ = test.SetPassphraseForTest(savedVault, passphraseTest)
 			return savedVault, nil
 		},
 	}
 
 	useCase := NewDeleteEntryUseCase(vaultService)
 
-	err := useCase.Execute(context.Background(), envTest, keyTest)
+	err := useCase.Execute(model.NewVaultContext(context.Background(), envTest, false), keyTest)
 	assert.NotNil(t, err, "Execute() should return non-existence error, got nil")
 	assert.Contains(
 		t,

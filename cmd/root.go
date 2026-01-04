@@ -1,60 +1,35 @@
 package cmd
 
 import (
-	"context"
-	"errors"
 	"fmt"
 	"os"
 
+	"github.com/ahmed-abdelgawad92/lockify/internal/cli"
+	"github.com/ahmed-abdelgawad92/lockify/internal/di"
 	"github.com/spf13/cobra"
 )
 
-const (
-	errMsgEmptyEnv = "env flag is required (use --env or -e)"
-)
-
-var rootCmd = &cobra.Command{
-	Use:   "lockify",
-	Short: "Lockify securely manages your .env files and secrets",
-	Long: `Lockify is a lightweight CLI tool for securely managing environment variables and .env files locally.
-
-Lockify encrypts your environment variables using AES-GCM encryption with Argon2 key derivation.
-Your secrets are protected with a passphrase that can be stored securely in your system's keyring.`,
-	Version: Version,
-	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Fprintln(os.Stderr, "Welcome to Lockify! Use --help to see available commands.")
-	},
-}
-
-// Execute runs the root command and handles errors.
-func Execute() error {
-	return rootCmd.Execute()
-}
-
-// requireEnvFlag retrieves the env flag and returns an error if empty
-func requireEnvFlag(cmd *cobra.Command) (string, error) {
-	env, err := cmd.Flags().GetString("env")
-	if err != nil {
-		return "", fmt.Errorf("failed to retrieve env flag: %w", err)
+// NewRootCmd returns the root command for subcommand registration
+func NewRootCmd() (*cobra.Command, *cli.CommandContext) {
+	cmdCtx := cli.NewCommandContext()
+	rootCmd := &cobra.Command{
+		Use:   "lockify",
+		Short: "Lockify securely manages your .env files and secrets",
+		Long: `Lockify is a lightweight CLI tool for securely managing environment variables and .env files locally.
+	
+		Lockify encrypts your environment variables using AES-GCM encryption with Argon2 key derivation.
+		Your secrets are protected with a passphrase that can be stored securely in your system's keyring.`,
+		Version: Version,
+		Run: func(cmd *cobra.Command, args []string) {
+			fmt.Fprintln(os.Stderr, "Welcome to Lockify! Use --help to see available commands.")
+		},
 	}
-	if env == "" {
-		return "", errors.New(errMsgEmptyEnv)
-	}
-	return env, nil
-}
+	// Add global --cache flag
+	rootCmd.PersistentFlags().BoolP("cache", "c", false, "Cache passphrase in system keyring")
 
-func requireStringFlag(cmd *cobra.Command, flag string) (string, error) {
-	value, err := cmd.Flags().GetString(flag)
-	if err != nil {
-		return "", fmt.Errorf("failed to retrieve %s flag: %w", flag, err)
-	}
-	if value == "" {
-		return "", fmt.Errorf("%s flag is required", flag)
-	}
-	return value, nil
-}
+	// Register built-in commands
+	versionCmd := NewVersionCommand(di.GetLogger())
+	rootCmd.AddCommand(versionCmd)
 
-// getContext returns a context for command execution
-func getContext() context.Context {
-	return context.Background()
+	return rootCmd, cmdCtx
 }

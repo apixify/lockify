@@ -1,11 +1,12 @@
-package cmd
+package vault
 
 import (
 	"fmt"
 
 	"github.com/ahmed-abdelgawad92/lockify/internal/app"
-	"github.com/ahmed-abdelgawad92/lockify/internal/di"
+	"github.com/ahmed-abdelgawad92/lockify/internal/cli"
 	"github.com/ahmed-abdelgawad92/lockify/internal/domain"
+	"github.com/ahmed-abdelgawad92/lockify/internal/domain/model"
 	"github.com/spf13/cobra"
 )
 
@@ -13,11 +14,16 @@ import (
 type ListCommand struct {
 	useCase app.ListEntriesUc
 	logger  domain.Logger
+	cmdCtx  *cli.CommandContext
 }
 
 // NewListCommand creates a new list command instance.
-func NewListCommand(useCase app.ListEntriesUc, logger domain.Logger) (*cobra.Command, error) {
-	cmd := &ListCommand{useCase, logger}
+func NewListCommand(
+	useCase app.ListEntriesUc,
+	logger domain.Logger,
+	cmdCtx *cli.CommandContext,
+) (*cobra.Command, error) {
+	cmd := &ListCommand{useCase, logger, cmdCtx}
 	// lockify list [env]
 	cobraCmd := &cobra.Command{
 		Use:   "list",
@@ -42,13 +48,19 @@ Only keys are displayed, not decrypted values, for security reasons.`,
 
 func (c *ListCommand) runE(cmd *cobra.Command, args []string) error {
 	c.logger.Progress("Listing all secrets in the vault")
-	env, err := requireEnvFlag(cmd)
+	env, err := c.cmdCtx.RequireEnvFlag(cmd)
 	if err != nil {
 		return err
 	}
 
-	ctx := getContext()
-	keys, err := c.useCase.Execute(ctx, env)
+	shouldCache, err := c.cmdCtx.GetCacheFlag(cmd)
+	if err != nil {
+		c.logger.Error("failed to get cache flag: %w", err)
+		return err
+	}
+
+	vctx := model.NewVaultContext(c.cmdCtx.GetContext(), env, shouldCache)
+	keys, err := c.useCase.Execute(vctx)
 	if err != nil {
 		return err
 	}
@@ -64,12 +76,4 @@ func (c *ListCommand) runE(cmd *cobra.Command, args []string) error {
 	}
 
 	return nil
-}
-
-func init() {
-	listCmd, err := NewListCommand(di.BuildListEntries(), di.GetLogger())
-	if err != nil {
-		panic(err)
-	}
-	rootCmd.AddCommand(listCmd)
 }

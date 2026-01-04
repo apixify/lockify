@@ -24,7 +24,7 @@ func createVaultServiceWithMocks(
 	passphrase *test.MockPassphraseService,
 	hash *test.MockHashService,
 ) VaultServiceInterface {
-	return NewVaultService(repo, passphrase, hash)
+	return NewVaultService(repo, passphrase, hash, 16) // Default salt size for tests
 }
 
 // ============================================================================
@@ -36,30 +36,30 @@ func TestCreate_Success(t *testing.T) {
 		&test.MockPassphraseService{},
 		&test.MockHashService{},
 	)
-	vault, err := vaultService.Create(context.Background(), "test")
+	vault, err := vaultService.Create(model.NewVaultContext(context.Background(), "test", false))
 	if err != nil {
 		t.Fatalf("Create() returned unexpected error: %v", err)
 	}
 	if vault == nil {
 		t.Fatal("Create() returned nil vault")
 	}
-	if vault.Meta.Env != "test" {
-		t.Errorf("Create() vault.Meta.Env = %q, want %q", vault.Meta.Env, "test")
+	if vault.Env() != "test" {
+		t.Errorf("Create() vault.Env() = %q, want %q", vault.Env(), "test")
 	}
-	if vault.Meta.FingerPrint == "" {
-		t.Error("Create() vault.Meta.FingerPrint is empty")
+	if vault.FingerPrint() == "" {
+		t.Error("Create() vault.FingerPrint() is empty")
 	}
-	if vault.Meta.Salt == "" {
-		t.Error("Create() vault.Meta.Salt is empty")
+	if vault.Salt() == "" {
+		t.Error("Create() vault.Salt() is empty")
 	}
-	if len(vault.Entries) != 0 {
-		t.Errorf("Create() vault.Entries length = %d, want 0", len(vault.Entries))
+	if vault.EntriesCount() != 0 {
+		t.Errorf("Create() vault.EntriesCount() = %d, want 0", vault.EntriesCount())
 	}
 }
 
 func TestCreate_VaultAlreadyExists(t *testing.T) {
 	repo := &test.MockVaultRepository{
-		ExistsFunc: func(ctx context.Context, env string) (bool, error) {
+		ExistsFunc: func(vctx *model.VaultContext) (bool, error) {
 			return true, nil
 		},
 	}
@@ -69,7 +69,7 @@ func TestCreate_VaultAlreadyExists(t *testing.T) {
 		&test.MockHashService{},
 	)
 
-	_, err := vaultService.Create(context.Background(), "test")
+	_, err := vaultService.Create(model.NewVaultContext(context.Background(), "test", false))
 	if err == nil {
 		t.Fatal("Create() with existing vault expected error, got nil")
 	}
@@ -80,7 +80,7 @@ func TestCreate_VaultAlreadyExists(t *testing.T) {
 
 func TestCreate_RepositoryExistsError(t *testing.T) {
 	repo := &test.MockVaultRepository{
-		ExistsFunc: func(ctx context.Context, env string) (bool, error) {
+		ExistsFunc: func(vctx *model.VaultContext) (bool, error) {
 			return false, errors.New("repository error")
 		},
 	}
@@ -90,7 +90,7 @@ func TestCreate_RepositoryExistsError(t *testing.T) {
 		&test.MockHashService{},
 	)
 
-	_, err := vaultService.Create(context.Background(), "test")
+	_, err := vaultService.Create(model.NewVaultContext(context.Background(), "test", false))
 	if err == nil {
 		t.Fatal("Create() with repository error expected error, got nil")
 	}
@@ -104,7 +104,7 @@ func TestCreate_RepositoryExistsError(t *testing.T) {
 
 func TestCreate_PassphraseGetError(t *testing.T) {
 	passphrase := &test.MockPassphraseService{
-		GetFunc: func(ctx context.Context, env string) (string, error) {
+		GetWithConfirmationFunc: func(vctx *model.VaultContext) (string, error) {
 			return "", errors.New("passphrase error")
 		},
 	}
@@ -114,7 +114,7 @@ func TestCreate_PassphraseGetError(t *testing.T) {
 		&test.MockHashService{},
 	)
 
-	_, err := vaultService.Create(context.Background(), "test")
+	_, err := vaultService.Create(model.NewVaultContext(context.Background(), "test", false))
 	if err == nil {
 		t.Fatal("Create() with passphrase error expected error, got nil")
 	}
@@ -135,7 +135,7 @@ func TestCreate_HashError(t *testing.T) {
 		hash,
 	)
 
-	_, err := vaultService.Create(context.Background(), "test")
+	_, err := vaultService.Create(model.NewVaultContext(context.Background(), "test", false))
 	if err == nil {
 		t.Fatal("Create() with hash error expected error, got nil")
 	}
@@ -156,7 +156,7 @@ func TestCreate_GenerateSaltError(t *testing.T) {
 		hash,
 	)
 
-	_, err := vaultService.Create(context.Background(), "test")
+	_, err := vaultService.Create(model.NewVaultContext(context.Background(), "test", false))
 	if err == nil {
 		t.Fatal("Create() with salt error expected error, got nil")
 	}
@@ -167,7 +167,7 @@ func TestCreate_GenerateSaltError(t *testing.T) {
 
 func TestCreate_RepositoryCreateError(t *testing.T) {
 	repo := &test.MockVaultRepository{
-		CreateFunc: func(ctx context.Context, vault *model.Vault) error {
+		CreateFunc: func(vctx *model.VaultContext, vault *model.Vault) error {
 			return errors.New("create error")
 		},
 	}
@@ -177,7 +177,7 @@ func TestCreate_RepositoryCreateError(t *testing.T) {
 		&test.MockHashService{},
 	)
 
-	_, err := vaultService.Create(context.Background(), "test")
+	_, err := vaultService.Create(model.NewVaultContext(context.Background(), "test", false))
 	if err == nil {
 		t.Fatal("Create() with repository create error expected error, got nil")
 	}
@@ -189,10 +189,10 @@ func TestCreate_RepositoryCreateError(t *testing.T) {
 func TestOpen_Success(t *testing.T) {
 	testVault := createTestVault("test")
 	repo := &test.MockVaultRepository{
-		ExistsFunc: func(ctx context.Context, env string) (bool, error) {
+		ExistsFunc: func(vctx *model.VaultContext) (bool, error) {
 			return true, nil
 		},
-		LoadFunc: func(ctx context.Context, env string) (*model.Vault, error) {
+		LoadFunc: func(vctx *model.VaultContext) (*model.Vault, error) {
 			return testVault, nil
 		},
 	}
@@ -202,15 +202,15 @@ func TestOpen_Success(t *testing.T) {
 		&test.MockHashService{},
 	)
 
-	vault, err := vaultService.Open(context.Background(), "test")
+	vault, err := vaultService.Open(model.NewVaultContext(context.Background(), "test", false))
 	if err != nil {
 		t.Fatalf("Open() returned unexpected error: %v", err)
 	}
 	if vault == nil {
 		t.Fatal("Open() returned nil vault")
 	}
-	if vault.Meta.Env != "test" {
-		t.Errorf("Open() vault.Meta.Env = %q, want %q", vault.Meta.Env, "test")
+	if vault.Env() != "test" {
+		t.Errorf("Open() vault.Env() = %q, want %q", vault.Env(), "test")
 	}
 	if vault.Passphrase() != "test-passphrase" {
 		t.Errorf("Open() vault.Passphrase() = %q, want %q", vault.Passphrase(), "test-passphrase")
@@ -219,7 +219,7 @@ func TestOpen_Success(t *testing.T) {
 
 func TestOpen_VaultDoesNotExist(t *testing.T) {
 	repo := &test.MockVaultRepository{
-		ExistsFunc: func(ctx context.Context, env string) (bool, error) {
+		ExistsFunc: func(vctx *model.VaultContext) (bool, error) {
 			return false, nil
 		},
 	}
@@ -229,7 +229,7 @@ func TestOpen_VaultDoesNotExist(t *testing.T) {
 		&test.MockHashService{},
 	)
 
-	_, err := vaultService.Open(context.Background(), "test")
+	_, err := vaultService.Open(model.NewVaultContext(context.Background(), "test", false))
 	if err == nil {
 		t.Fatal("Open() with non-existent vault expected error, got nil")
 	}
@@ -244,18 +244,18 @@ func TestOpen_VaultDoesNotExist(t *testing.T) {
 
 func TestOpen_PassphraseGetError(t *testing.T) {
 	repo := &test.MockVaultRepository{
-		ExistsFunc: func(ctx context.Context, env string) (bool, error) {
+		ExistsFunc: func(vctx *model.VaultContext) (bool, error) {
 			return true, nil
 		},
 	}
 	passphrase := &test.MockPassphraseService{
-		GetFunc: func(ctx context.Context, env string) (string, error) {
+		GetFunc: func(vctx *model.VaultContext) (string, error) {
 			return "", errors.New("passphrase error")
 		},
 	}
 	vaultService := createVaultServiceWithMocks(repo, passphrase, &test.MockHashService{})
 
-	_, err := vaultService.Open(context.Background(), "test")
+	_, err := vaultService.Open(model.NewVaultContext(context.Background(), "test", false))
 	if err == nil {
 		t.Fatal("Open() with passphrase error expected error, got nil")
 	}
@@ -266,10 +266,10 @@ func TestOpen_PassphraseGetError(t *testing.T) {
 
 func TestOpen_RepositoryLoadError(t *testing.T) {
 	repo := &test.MockVaultRepository{
-		ExistsFunc: func(ctx context.Context, env string) (bool, error) {
+		ExistsFunc: func(vctx *model.VaultContext) (bool, error) {
 			return true, nil
 		},
-		LoadFunc: func(ctx context.Context, env string) (*model.Vault, error) {
+		LoadFunc: func(vctx *model.VaultContext) (*model.Vault, error) {
 			return nil, errors.New("load error")
 		},
 	}
@@ -279,7 +279,7 @@ func TestOpen_RepositoryLoadError(t *testing.T) {
 		&test.MockHashService{},
 	)
 
-	_, err := vaultService.Open(context.Background(), "test")
+	_, err := vaultService.Open(model.NewVaultContext(context.Background(), "test", false))
 	if err == nil {
 		t.Fatal("Open() with load error expected error, got nil")
 	}
@@ -292,25 +292,30 @@ func TestOpen_InvalidPassphrase(t *testing.T) {
 	testVault := createTestVault("test")
 	clearCalled := false
 	repo := &test.MockVaultRepository{
-		ExistsFunc: func(ctx context.Context, env string) (bool, error) {
+		ExistsFunc: func(vctx *model.VaultContext) (bool, error) {
 			return true, nil
 		},
-		LoadFunc: func(ctx context.Context, env string) (*model.Vault, error) {
+		LoadFunc: func(vctx *model.VaultContext) (*model.Vault, error) {
 			return testVault, nil
 		},
 	}
 	passphrase := &test.MockPassphraseService{
-		ValidateFunc: func(ctx context.Context, vault *model.Vault, passphrase string) error {
-			return errors.New("invalid passphrase")
+		GetFunc: func(vctx *model.VaultContext) (string, error) {
+			return "wrong-passphrase", nil
 		},
-		ClearFunc: func(ctx context.Context, env string) error {
+		ClearFunc: func(vctx *model.VaultContext) error {
 			clearCalled = true
 			return nil
 		},
 	}
-	vaultService := createVaultServiceWithMocks(repo, passphrase, &test.MockHashService{})
+	hashService := &test.MockHashService{
+		VerifyFunc: func(hashedPassphrase, passphrase string) error {
+			return errors.New("invalid passphrase")
+		},
+	}
+	vaultService := createVaultServiceWithMocks(repo, passphrase, hashService)
 
-	_, err := vaultService.Open(context.Background(), "test")
+	_, err := vaultService.Open(model.NewVaultContext(context.Background(), "test", false))
 	if err == nil {
 		t.Fatal("Open() with invalid passphrase expected error, got nil")
 	}
@@ -326,7 +331,7 @@ func TestSave_Success(t *testing.T) {
 	vault := createTestVault("test")
 	saveCalled := false
 	repo := &test.MockVaultRepository{
-		SaveFunc: func(ctx context.Context, vault *model.Vault) error {
+		SaveFunc: func(vctx *model.VaultContext, vault *model.Vault) error {
 			saveCalled = true
 			if vault == nil {
 				return errors.New("vault is nil")
@@ -340,7 +345,7 @@ func TestSave_Success(t *testing.T) {
 		&test.MockHashService{},
 	)
 
-	err := vaultService.Save(context.Background(), vault)
+	err := vaultService.Save(model.NewVaultContext(context.Background(), "test", false), vault)
 	if err != nil {
 		t.Fatalf("Save() returned unexpected error: %v", err)
 	}
@@ -352,7 +357,7 @@ func TestSave_Success(t *testing.T) {
 func TestSave_RepositoryError(t *testing.T) {
 	vault := createTestVault("test")
 	repo := &test.MockVaultRepository{
-		SaveFunc: func(ctx context.Context, vault *model.Vault) error {
+		SaveFunc: func(vctx *model.VaultContext, vault *model.Vault) error {
 			return errors.New("save error")
 		},
 	}
@@ -362,7 +367,7 @@ func TestSave_RepositoryError(t *testing.T) {
 		&test.MockHashService{},
 	)
 
-	err := vaultService.Save(context.Background(), vault)
+	err := vaultService.Save(model.NewVaultContext(context.Background(), "test", false), vault)
 	if err == nil {
 		t.Fatal("Save() with repository error expected error, got nil")
 	}

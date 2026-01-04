@@ -1,15 +1,15 @@
 package app
 
 import (
-	"context"
 	"fmt"
 
+	"github.com/ahmed-abdelgawad92/lockify/internal/domain/model"
 	"github.com/ahmed-abdelgawad92/lockify/internal/domain/service"
 )
 
 // AddEntryUc defines the interface for adding entries to the vault.
 type AddEntryUc interface {
-	Execute(context.Context, AddEntryDTO) error
+	Execute(vctx *model.VaultContext, dto AddEntryDTO) error
 }
 
 // AddEntryUseCase implements the use case for adding entries to the vault.
@@ -34,15 +34,15 @@ func NewAddEntryUseCase(
 }
 
 // Execute adds or updates an entry in the vault.
-func (useCase *AddEntryUseCase) Execute(ctx context.Context, dto AddEntryDTO) error {
-	vault, err := useCase.vaultService.Open(ctx, dto.Env)
+func (useCase *AddEntryUseCase) Execute(vctx *model.VaultContext, dto AddEntryDTO) error {
+	vault, err := useCase.vaultService.Open(vctx)
 	if err != nil {
 		return fmt.Errorf("failed to open vault for environment %s: %w", dto.Env, err)
 	}
 
 	encryptedValue, err := useCase.encryptionService.Encrypt(
 		[]byte(dto.Value),
-		vault.Meta.Salt,
+		vault.Salt(),
 		vault.Passphrase(),
 	)
 	if err != nil {
@@ -54,5 +54,5 @@ func (useCase *AddEntryUseCase) Execute(ctx context.Context, dto AddEntryDTO) er
 		return fmt.Errorf("failed to set entry: %w", err)
 	}
 
-	return useCase.vaultService.Save(ctx, vault)
+	return useCase.vaultService.Save(vctx, vault)
 }

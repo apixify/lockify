@@ -1,11 +1,12 @@
-package cmd
+package vault
 
 import (
 	"fmt"
 
 	"github.com/ahmed-abdelgawad92/lockify/internal/app"
-	"github.com/ahmed-abdelgawad92/lockify/internal/di"
+	"github.com/ahmed-abdelgawad92/lockify/internal/cli"
 	"github.com/ahmed-abdelgawad92/lockify/internal/domain"
+	"github.com/ahmed-abdelgawad92/lockify/internal/domain/model"
 	"github.com/ahmed-abdelgawad92/lockify/internal/domain/service"
 	"github.com/spf13/cobra"
 )
@@ -15,6 +16,7 @@ type AddCommand struct {
 	useCase app.AddEntryUc
 	prompt  service.PromptService
 	logger  domain.Logger
+	cmdCtx  *cli.CommandContext
 }
 
 // NewAddCommand creates a new add command instance.
@@ -22,8 +24,9 @@ func NewAddCommand(
 	useCase app.AddEntryUc,
 	prompt service.PromptService,
 	logger domain.Logger,
+	cmdCtx *cli.CommandContext,
 ) (*cobra.Command, error) {
-	cmd := &AddCommand{useCase, prompt, logger}
+	cmd := &AddCommand{useCase, prompt, logger, cmdCtx}
 
 	// lockify add --env [env]
 	cobraCmd := &cobra.Command{
@@ -55,7 +58,7 @@ func NewAddCommand(
 
 func (c *AddCommand) runE(cmd *cobra.Command, args []string) error {
 	c.logger.Progress("seting a new entry to the vault...")
-	env, err := requireEnvFlag(cmd)
+	env, err := c.cmdCtx.RequireEnvFlag(cmd)
 	if err != nil {
 		return err
 	}
@@ -71,10 +74,16 @@ func (c *AddCommand) runE(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	ctx := getContext()
+	shouldCache, err := c.cmdCtx.GetCacheFlag(cmd)
+	if err != nil {
+		c.logger.Error("failed to get cache flag: %w", err)
+		return err
+	}
+
+	vctx := model.NewVaultContext(c.cmdCtx.GetContext(), env, shouldCache)
 	dto := app.AddEntryDTO{Env: env, Key: key, Value: value}
 
-	err = c.useCase.Execute(ctx, dto)
+	err = c.useCase.Execute(vctx, dto)
 	if err != nil {
 		c.logger.Error(err.Error())
 		return err
@@ -83,12 +92,4 @@ func (c *AddCommand) runE(cmd *cobra.Command, args []string) error {
 	c.logger.Success("key %s is added successfully.", key)
 
 	return nil
-}
-
-func init() {
-	addCmd, err := NewAddCommand(di.BuildAddEntry(), di.BuildPromptService(), di.GetLogger())
-	if err != nil {
-		panic(err)
-	}
-	rootCmd.AddCommand(addCmd)
 }
