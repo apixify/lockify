@@ -1,5 +1,7 @@
 package storage
 
+import "io/fs"
+
 // FileSystem abstracts file operations for testing
 type FileSystem interface {
 	// MkdirAll creates a directory and all parent directories
@@ -9,11 +11,5 @@ type FileSystem interface {
 	// ReadFile reads a file
 	ReadFile(path string) ([]byte, error)
 	// Stat returns file information
-	Stat(path string) (FileInfo, error)
-}
-
-// FileInfo represents file metadata
-type FileInfo interface {
-	IsDir() bool
-	Mode() uint32
+	Stat(path string) (fs.FileInfo, error)
 }

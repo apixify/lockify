@@ -47,7 +47,7 @@ We will respond within 48 hours.
 - Rotate keys periodically:
 
 ```sh
-lockify rotate-key --env prod
+lockify key rotate --env prod
 ```
 
 - Never commit exported `.env` files.

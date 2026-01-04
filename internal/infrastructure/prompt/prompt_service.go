@@ -50,3 +50,17 @@ func (p *Service) GetPassphraseInput(message string) (string, error) {
 	}
 	return passphrase, nil
 }
+
+// GetConfirmation prompts the user for a yes/no confirmation.
+func (p *Service) GetConfirmation(message string, defaultValue bool) (bool, error) {
+	var result bool
+	prompt := &survey.Confirm{
+		Message: message,
+		Default: defaultValue,
+	}
+	err := survey.AskOne(prompt, &result)
+	if err != nil {
+		return false, fmt.Errorf("failed to get confirmation: %w", err)
+	}
+	return result, nil
+}

@@ -1,11 +1,12 @@
-package cmd
+package vault
 
 import (
 	"fmt"
 
 	"github.com/ahmed-abdelgawad92/lockify/internal/app"
-	"github.com/ahmed-abdelgawad92/lockify/internal/di"
+	"github.com/ahmed-abdelgawad92/lockify/internal/cli"
 	"github.com/ahmed-abdelgawad92/lockify/internal/domain"
+	"github.com/ahmed-abdelgawad92/lockify/internal/domain/model"
 	"github.com/spf13/cobra"
 )
 
@@ -13,11 +14,16 @@ import (
 type DeleteCommand struct {
 	useCase app.DeleteEntryUc
 	logger  domain.Logger
+	cmdCtx  *cli.CommandContext
 }
 
 // NewDeleteCommand creates a new delete command instance.
-func NewDeleteCommand(useCase app.DeleteEntryUc, logger domain.Logger) (*cobra.Command, error) {
-	cmd := &DeleteCommand{useCase, logger}
+func NewDeleteCommand(
+	useCase app.DeleteEntryUc,
+	logger domain.Logger,
+	cmdCtx *cli.CommandContext,
+) (*cobra.Command, error) {
+	cmd := &DeleteCommand{useCase, logger, cmdCtx}
 	// lockify del --env [env] --key [key]
 	cobraCmd := &cobra.Command{
 		Use:     "delete",
@@ -47,17 +53,23 @@ This command removes a key-value pair from the vault for the specified environme
 
 func (c *DeleteCommand) runE(cmd *cobra.Command, args []string) error {
 	c.logger.Progress("removing key...")
-	env, err := requireEnvFlag(cmd)
+	env, err := c.cmdCtx.RequireEnvFlag(cmd)
 	if err != nil {
 		return err
 	}
-	key, err := requireStringFlag(cmd, "key")
+	key, err := c.cmdCtx.RequireStringFlag(cmd, "key")
 	if err != nil {
 		return err
 	}
 
-	ctx := getContext()
-	err = c.useCase.Execute(ctx, env, key)
+	shouldCache, err := c.cmdCtx.GetCacheFlag(cmd)
+	if err != nil {
+		c.logger.Error("failed to get cache flag: %w", err)
+		return err
+	}
+
+	vctx := model.NewVaultContext(c.cmdCtx.GetContext(), env, shouldCache)
+	err = c.useCase.Execute(vctx, key)
 	if err != nil {
 		return err
 	}
@@ -65,12 +77,4 @@ func (c *DeleteCommand) runE(cmd *cobra.Command, args []string) error {
 	c.logger.Success("key %s is removed successfully.\n", key)
 
 	return nil
-}
-
-func init() {
-	delCmd, err := NewDeleteCommand(di.BuildDeleteEntry(), di.GetLogger())
-	if err != nil {
-		panic(err)
-	}
-	rootCmd.AddCommand(delCmd)
 }

@@ -1,11 +1,11 @@
 package app
 
 import (
-	"context"
 	"fmt"
 	"io"
 
 	"github.com/ahmed-abdelgawad92/lockify/internal/domain"
+	"github.com/ahmed-abdelgawad92/lockify/internal/domain/model"
 	"github.com/ahmed-abdelgawad92/lockify/internal/domain/model/value"
 	"github.com/ahmed-abdelgawad92/lockify/internal/domain/service"
 )
@@ -13,8 +13,7 @@ import (
 // ImportEnvUc defines the interface for importing entries into the vault.
 type ImportEnvUc interface {
 	Execute(
-		ctx context.Context,
-		env string,
+		vctx *model.VaultContext,
 		format value.FileFormat,
 		r io.Reader,
 		overwrite bool,
@@ -41,15 +40,14 @@ func NewImportEnvUseCase(
 
 // Execute imports entries from a reader into the vault.
 func (uc *ImportEnvUseCase) Execute(
-	ctx context.Context,
-	env string,
+	vctx *model.VaultContext,
 	format value.FileFormat,
 	r io.Reader,
 	overwrite bool,
 ) (imported, skipped int, err error) {
-	vault, err := uc.vaultService.Open(ctx, env)
+	vault, err := uc.vaultService.Open(vctx)
 	if err != nil {
-		return 0, 0, fmt.Errorf("couln't open vault for env %s: %w", env, err)
+		return 0, 0, fmt.Errorf("couln't open vault for env %s: %w", vctx.Env, err)
 	}
 
 	var entries map[string]string
@@ -94,7 +92,7 @@ func (uc *ImportEnvUseCase) Execute(
 	}
 
 	if imported > 0 {
-		err = uc.vaultService.Save(ctx, vault)
+		err = uc.vaultService.Save(vctx, vault)
 		if err != nil {
 			return imported, skipped, fmt.Errorf("failed to save vault: %w", err)
 		}

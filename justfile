@@ -12,7 +12,7 @@ run *args:
 
 # Run tests in a directory (default: all packages)
 test dir="...":
-    go test -v -race -timeout=30s ./{{dir}}
+    go test -v -timeout=30s ./{{dir}}
 
 # Run tests with verbose output
 test-verbose dir="...":

@@ -1,18 +1,18 @@
 package app
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 
 	"github.com/ahmed-abdelgawad92/lockify/internal/domain"
+	"github.com/ahmed-abdelgawad92/lockify/internal/domain/model"
 	"github.com/ahmed-abdelgawad92/lockify/internal/domain/model/value"
 	"github.com/ahmed-abdelgawad92/lockify/internal/domain/service"
 )
 
 // ExportEnvUc defines the interface for exporting vault entries.
 type ExportEnvUc interface {
-	Execute(ctx context.Context, env string, exportFormat value.FileFormat) error
+	Execute(vctx *model.VaultContext, exportFormat value.FileFormat) error
 }
 
 // ExportEnvUseCase implements the use case for exporting vault entries in various formats.
@@ -33,11 +33,10 @@ func NewExportEnvUseCase(
 
 // Execute exports all entries from the vault in the specified format.
 func (useCase *ExportEnvUseCase) Execute(
-	ctx context.Context,
-	env string,
+	vctx *model.VaultContext,
 	exportFormat value.FileFormat,
 ) error {
-	vault, err := useCase.vaultService.Open(ctx, env)
+	vault, err := useCase.vaultService.Open(vctx)
 	if err != nil {
 		return err
 	}
