@@ -38,7 +38,7 @@ func (useCase *GetEntryUseCase) Execute(vctx *model.VaultContext, key string) (s
 
 	value, err := useCase.encryptionService.Decrypt(
 		entry.Value,
-		vault.Meta.Salt,
+		vault.Salt(),
 		vault.Passphrase(),
 	)
 	if err != nil {

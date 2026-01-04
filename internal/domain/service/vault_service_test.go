@@ -43,17 +43,17 @@ func TestCreate_Success(t *testing.T) {
 	if vault == nil {
 		t.Fatal("Create() returned nil vault")
 	}
-	if vault.Meta.Env != "test" {
-		t.Errorf("Create() vault.Meta.Env = %q, want %q", vault.Meta.Env, "test")
+	if vault.Env() != "test" {
+		t.Errorf("Create() vault.Env() = %q, want %q", vault.Env(), "test")
 	}
-	if vault.Meta.FingerPrint == "" {
-		t.Error("Create() vault.Meta.FingerPrint is empty")
+	if vault.FingerPrint() == "" {
+		t.Error("Create() vault.FingerPrint() is empty")
 	}
-	if vault.Meta.Salt == "" {
-		t.Error("Create() vault.Meta.Salt is empty")
+	if vault.Salt() == "" {
+		t.Error("Create() vault.Salt() is empty")
 	}
-	if len(vault.Entries) != 0 {
-		t.Errorf("Create() vault.Entries length = %d, want 0", len(vault.Entries))
+	if vault.EntriesCount() != 0 {
+		t.Errorf("Create() vault.EntriesCount() = %d, want 0", vault.EntriesCount())
 	}
 }
 
@@ -209,8 +209,8 @@ func TestOpen_Success(t *testing.T) {
 	if vault == nil {
 		t.Fatal("Open() returned nil vault")
 	}
-	if vault.Meta.Env != "test" {
-		t.Errorf("Open() vault.Meta.Env = %q, want %q", vault.Meta.Env, "test")
+	if vault.Env() != "test" {
+		t.Errorf("Open() vault.Env() = %q, want %q", vault.Env(), "test")
 	}
 	if vault.Passphrase() != "test-passphrase" {
 		t.Errorf("Open() vault.Passphrase() = %q, want %q", vault.Passphrase(), "test-passphrase")

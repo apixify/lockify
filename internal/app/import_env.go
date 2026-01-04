@@ -78,7 +78,7 @@ func (uc *ImportEnvUseCase) Execute(
 
 		encryptedValue, err := uc.encryptionService.Encrypt(
 			[]byte(value),
-			vault.Meta.Salt,
+			vault.Salt(),
 			vault.Passphrase(),
 		)
 		if err != nil {

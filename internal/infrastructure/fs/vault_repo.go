@@ -32,7 +32,7 @@ func (repo *FileVaultRepository) Create(vctx *model.VaultContext, vault *model.V
 		return fmt.Errorf("vault cannot be nil")
 	}
 
-	vaultPath := repo.cfg.GetVaultPath(vault.Meta.Env)
+	vaultPath := repo.cfg.GetVaultPath(vault.Env())
 	vault.SetPath(vaultPath)
 
 	if err := repo.fs.MkdirAll(repo.cfg.BaseDir, repo.cfg.DirMode); err != nil {
@@ -44,7 +44,7 @@ func (repo *FileVaultRepository) Create(vctx *model.VaultContext, vault *model.V
 		return fmt.Errorf("failed to check vault existence: %w", err)
 	}
 	if exists {
-		return fmt.Errorf("vault already exists for environment %q", vault.Meta.Env)
+		return fmt.Errorf("vault already exists for environment %q", vault.Env())
 	}
 
 	return repo.Save(vctx, vault)
@@ -73,11 +73,11 @@ func (repo *FileVaultRepository) Load(vctx *model.VaultContext) (*model.Vault, e
 
 	vault.SetPath(vaultPath)
 
-	if vault.Meta.Env != vctx.Env {
+	if vault.Env() != vctx.Env {
 		return nil, fmt.Errorf(
 			"vault environment mismatch: expected %q, got %q",
 			vctx.Env,
-			vault.Meta.Env,
+			vault.Env(),
 		)
 	}
 
@@ -92,7 +92,7 @@ func (repo *FileVaultRepository) Save(vctx *model.VaultContext, vault *model.Vau
 
 	vaultPath := vault.Path()
 	if vaultPath == "" {
-		vaultPath = repo.cfg.GetVaultPath(vault.Meta.Env)
+		vaultPath = repo.cfg.GetVaultPath(vault.Env())
 		vault.SetPath(vaultPath)
 	}
 

@@ -81,14 +81,14 @@ func (s *PassphraseService) Validate(
 	if vault == nil {
 		return fmt.Errorf("vault cannot be nil")
 	}
-	if vault.Meta.FingerPrint == "" {
+	if vault.FingerPrint() == "" {
 		return fmt.Errorf("fingerprint cannot be empty")
 	}
 	if passphrase == "" {
 		return fmt.Errorf("passphrase cannot be empty")
 	}
 
-	return s.cryptoUtil.Verify(vault.Meta.FingerPrint, passphrase)
+	return s.cryptoUtil.Verify(vault.FingerPrint(), passphrase)
 }
 
 // GetWithConfirmation prompts the user for a passphrase with confirmation (for new vaults)

@@ -117,17 +117,17 @@ func TestRotatePassphraseUseCase_Execute_Success(t *testing.T) {
 	assert.Equal(
 		t,
 		newSalt,
-		savedVault.Meta.Salt,
-		fmt.Sprintf("Execute() should update salt to %q, got %q", newSalt, savedVault.Meta.Salt),
+		savedVault.Salt(),
+		fmt.Sprintf("Execute() should update salt to %q, got %q", newSalt, savedVault.Salt()),
 	)
 	assert.Equal(
 		t,
 		newFingerprint,
-		savedVault.Meta.FingerPrint,
+		savedVault.FingerPrint(),
 		fmt.Sprintf(
 			"Execute() should update fingerprint to %q, got %q",
 			newFingerprint,
-			savedVault.Meta.FingerPrint,
+			savedVault.FingerPrint(),
 		),
 	)
 

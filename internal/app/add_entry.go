@@ -42,7 +42,7 @@ func (useCase *AddEntryUseCase) Execute(vctx *model.VaultContext, dto AddEntryDT
 
 	encryptedValue, err := useCase.encryptionService.Encrypt(
 		[]byte(dto.Value),
-		vault.Meta.Salt,
+		vault.Salt(),
 		vault.Passphrase(),
 	)
 	if err != nil {

@@ -32,24 +32,24 @@ func TestInitializeVaultUseCase_Execute_Success(t *testing.T) {
 	assert.Equal(
 		t,
 		envTest,
-		vault.Meta.Env,
-		fmt.Sprintf("Execute() returned vault with env %q, want %q", vault.Meta.Env, envTest),
+		vault.Env(),
+		fmt.Sprintf("Execute() returned vault with env %q, want %q", vault.Env(), envTest),
 	)
 	assert.Equal(
 		t,
 		fingerprintTest,
-		vault.Meta.FingerPrint,
+		vault.FingerPrint(),
 		fmt.Sprintf(
 			"Execute() returned vault with fingerprint %q, want %q",
-			vault.Meta.FingerPrint,
+			vault.FingerPrint(),
 			fingerprintTest,
 		),
 	)
 	assert.Equal(
 		t,
 		saltTest,
-		vault.Meta.Salt,
-		fmt.Sprintf("Execute() returned vault with salt %q, want %q", vault.Meta.Salt, saltTest),
+		vault.Salt(),
+		fmt.Sprintf("Execute() returned vault with salt %q, want %q", vault.Salt(), saltTest),
 	)
 }
 

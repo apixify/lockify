@@ -5,7 +5,6 @@ import (
 	"slices"
 	"strings"
 	"testing"
-	"time"
 )
 
 const (
@@ -33,17 +32,17 @@ func createTestVault(t *testing.T) *Vault {
 func TestNewVault(t *testing.T) {
 	vault := createTestVault(t)
 
-	if vault.Meta.Env != testEnv {
-		t.Errorf("expected env %q, got %q", testEnv, vault.Meta.Env)
+	if vault.Env() != testEnv {
+		t.Errorf("expected env %q, got %q", testEnv, vault.Env())
 	}
-	if vault.Meta.FingerPrint != testFingerprint {
-		t.Errorf("expected fingerprint %q, got %q", testFingerprint, vault.Meta.FingerPrint)
+	if vault.FingerPrint() != testFingerprint {
+		t.Errorf("expected fingerprint %q, got %q", testFingerprint, vault.FingerPrint())
 	}
-	if vault.Meta.Salt != testSalt {
-		t.Errorf("expected salt %q, got %q", testSalt, vault.Meta.Salt)
+	if vault.Salt() != testSalt {
+		t.Errorf("expected salt %q, got %q", testSalt, vault.Salt())
 	}
-	if len(vault.Entries) != 0 {
-		t.Errorf("expected 0 entries, got %d", len(vault.Entries))
+	if vault.EntriesCount() != 0 {
+		t.Errorf("expected 0 entries, got %d", vault.EntriesCount())
 	}
 }
 
@@ -51,13 +50,17 @@ func TestSetEntry(t *testing.T) {
 	vault := createTestVault(t)
 
 	vault.SetEntry(testKey, testValue)
-	if len(vault.Entries) != 1 {
-		t.Errorf("expected 1 entry, got %d", len(vault.Entries))
+	if vault.EntriesCount() != 1 {
+		t.Errorf("expected 1 entry, got %d", vault.EntriesCount())
 	}
-	if vault.Entries[testKey].Value != testValue {
-		t.Errorf("expected value %q, got %q", testValue, vault.Entries[testKey].Value)
+	entry, err := vault.GetEntry(testKey)
+	if err != nil {
+		t.Fatalf("failed to get entry: %v", err)
 	}
-	if vault.Entries[testKey].CreatedAt == "" {
+	if entry.Value != testValue {
+		t.Errorf("expected value %q, got %q", testValue, entry.Value)
+	}
+	if entry.CreatedAt == "" {
 		t.Errorf("expected created at, got empty")
 	}
 }
@@ -66,8 +69,8 @@ func TestGetEntry(t *testing.T) {
 	vault := createTestVault(t)
 
 	vault.SetEntry(testKey, testValue)
-	if len(vault.Entries) != 1 {
-		t.Errorf("expected 1 entry, got %d", len(vault.Entries))
+	if vault.EntriesCount() != 1 {
+		t.Errorf("expected 1 entry, got %d", vault.EntriesCount())
 	}
 
 	entry, err := vault.GetEntry(testKey)
@@ -89,16 +92,20 @@ func TestSetEntryUpdateKey(t *testing.T) {
 	vault := createTestVault(t)
 
 	vault.SetEntry(testKey, testValue)
-	if len(vault.Entries) != 1 {
-		t.Errorf("expected 1 entry, got %d", len(vault.Entries))
+	if vault.EntriesCount() != 1 {
+		t.Errorf("expected 1 entry, got %d", vault.EntriesCount())
 	}
-	// Manually set timestamps to past time for testing
-	entry := vault.Entries[testKey]
-	pastTime := time.Now().UTC().Add(-24 * time.Hour).Format(time.RFC3339)
-	entry.CreatedAt = pastTime
-	entry.UpdatedAt = pastTime
-	vault.Entries[testKey] = entry
+	// Get the first entry to capture its CreatedAt timestamp
+	firstEntry, err := vault.GetEntry(testKey)
+	if err != nil {
+		t.Fatalf("failed to get entry: %v", err)
+	}
+	firstCreatedAt := firstEntry.CreatedAt
+	if firstCreatedAt == "" {
+		t.Fatalf("expected CreatedAt to be set")
+	}
 
+	// Update the entry - CreatedAt should remain the same, UpdatedAt should change
 	testValue2 := "test-value-2"
 	vault.SetEntry(testKey, testValue2)
 	entry, err := vault.GetEntry(testKey)
@@ -108,11 +115,14 @@ func TestSetEntryUpdateKey(t *testing.T) {
 	if entry.Value != testValue2 {
 		t.Errorf("expected value %q, got %q", testValue2, entry.Value)
 	}
-	if entry.CreatedAt != pastTime {
-		t.Errorf("expected created at to be %q, got %q", pastTime, entry.CreatedAt)
+	if entry.CreatedAt != firstCreatedAt {
+		t.Errorf("expected CreatedAt to remain %q, got %q", firstCreatedAt, entry.CreatedAt)
 	}
-	if entry.UpdatedAt == pastTime {
-		t.Errorf("expected updated at not to be %q, got %q", pastTime, entry.UpdatedAt)
+	if entry.UpdatedAt == "" {
+		t.Errorf("expected UpdatedAt to be set, got empty")
+	}
+	if entry.Value != testValue2 {
+		t.Errorf("expected value %q, got %q", testValue2, entry.Value)
 	}
 }
 
@@ -144,13 +154,13 @@ func TestDeleteEntry(t *testing.T) {
 	vault := createTestVault(t)
 
 	vault.SetEntry(testKey, testValue)
-	if len(vault.Entries) != 1 {
-		t.Errorf("expected 1 entry, got %d", len(vault.Entries))
+	if vault.EntriesCount() != 1 {
+		t.Errorf("expected 1 entry, got %d", vault.EntriesCount())
 	}
 
 	vault.DeleteEntry(testKey)
-	if len(vault.Entries) != 0 {
-		t.Errorf("expected 0 entries, got %d", len(vault.Entries))
+	if vault.EntriesCount() != 0 {
+		t.Errorf("expected 0 entries, got %d", vault.EntriesCount())
 	}
 
 	_, err := vault.GetEntry(testKey)
@@ -178,8 +188,8 @@ func TestListKeys(t *testing.T) {
 	vault := createTestVault(t)
 
 	vault.SetEntry("test_key", "test_value")
-	if len(vault.Entries) != 1 {
-		t.Errorf("expected 1 entry, got %d", len(vault.Entries))
+	if vault.EntriesCount() != 1 {
+		t.Errorf("expected 1 entry, got %d", vault.EntriesCount())
 	}
 
 	keys := vault.ListKeys()

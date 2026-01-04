@@ -45,7 +45,7 @@ func (useCase *ExportEnvUseCase) Execute(
 		err := vault.ForEachEntry(func(key string, entry model.Entry) error {
 			decryptedVal, err := useCase.encryptionService.Decrypt(
 				entry.Value,
-				vault.Meta.Salt,
+				vault.Salt(),
 				vault.Passphrase(),
 			)
 			if err != nil {
@@ -62,7 +62,7 @@ func (useCase *ExportEnvUseCase) Execute(
 		err := vault.ForEachEntry(func(key string, entry model.Entry) error {
 			decryptedVal, err := useCase.encryptionService.Decrypt(
 				entry.Value,
-				vault.Meta.Salt,
+				vault.Salt(),
 				vault.Passphrase(),
 			)
 			if err != nil {
